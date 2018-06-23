@@ -1,7 +1,6 @@
 
 package io.marioslab.basis.site;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -14,6 +13,13 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
 
@@ -28,12 +34,8 @@ public class BasisSite {
 		generate(config);
 		if (config.isWatch()) {
 			try {
-				WatchService service = FileSystems.getDefault().newWatchService();
-				Path watchDir = config.getInput().toPath();
 				WatchService watcher = FileSystems.getDefault().newWatchService();
-				watchDir.register(watcher,
-					new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY},
-					SensitivityWatchEventModifier.HIGH);
+				registerDirectories(watcher, config.getInput());
 
 				while (true) {
 					log("Watching input directory " + config.getInput().getPath());
@@ -42,6 +44,13 @@ public class BasisSite {
 					for (WatchEvent<?> event : key.pollEvents()) {
 						WatchEvent.Kind<?> kind = event.kind();
 						if (kind == StandardWatchEventKinds.OVERFLOW) continue;
+
+						WatchEvent<Path> ev = (WatchEvent<Path>)event;
+						Path filename = ev.context();
+						File file = filename.toFile();
+						if (file.exists() && file.isDirectory()) {
+							registerDirectories(watcher, file);
+						}
 					}
 
 					if (!key.reset()) {
@@ -56,6 +65,21 @@ public class BasisSite {
 				error("Watching input directory for changes failed. " + e.getMessage());
 			}
 		}
+	}
+
+	private void registerDirectories (WatchService watcher, File dir) throws IOException {
+		if (!dir.isDirectory()) return;
+		dir.toPath().register(watcher,
+			new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY},
+			SensitivityWatchEventModifier.HIGH);
+
+		File[] children = dir.listFiles();
+		if (children != null) {
+			for (File child : children) {
+				if (child.isDirectory()) registerDirectories(watcher, child);
+			}
+		}
+
 	}
 
 	private void generate (Configuration config) {
@@ -81,11 +105,46 @@ public class BasisSite {
 			}
 		} else {
 			try {
+				Map<String, Object> metadata = FileUtils.readMetadataBlock(input);
+
 				if (input.getName().contains(".bt.")) {
-					Template template = new FileTemplateLoader(input.getParentFile()).load(input.getName());
+					Template template = null;
+					if (metadata == null) {
+						template = new FileTemplateLoader(input.getParentFile()).load(input.getName());
+					} else {
+						template = new FileTemplateLoader(input.getParentFile()) {
+							@Override
+							protected Source loadSource (String path) {
+								if (path.equals(input.getName())) {
+									return new Source(path, FileUtils.stripMetadataBlock(input));
+								} else {
+									return super.loadSource(path);
+								}
+							}
+						}.load(input.getName());
+					}
 					try (OutputStream out = new FileOutputStream(output)) {
 						TemplateContext context = new TemplateContext();
-						context.set("file", input);
+						context.set("file", new SiteFile(input.getParent(), input.getName(), output.getParent(), output.getName(), false, metadata));
+
+						context.set("formatDate", (BiFunction<String, Date, String>) (String format, Date date) -> {
+							return new SimpleDateFormat(format).format(date);
+						});
+
+						context.set("listFiles", (Function<String, List<SiteFile>>) (String dir) -> {
+							List<SiteFile> files = new ArrayList<SiteFile>();
+							File directory = new File(dir);
+							File[] children = directory.listFiles();
+							if (children != null) {
+								for (File child : children) {
+									File childOutput = new File(config.getOutput(),
+										child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
+									files.add(new SiteFile(child.getParent(), child.getName(), childOutput.getParent(), childOutput.getName(), child.isDirectory(),
+										FileUtils.readMetadataBlock(child)));
+								}
+							}
+							return files;
+						});
 
 						try {
 							template.render(context, out);
@@ -95,7 +154,11 @@ public class BasisSite {
 						}
 					}
 				} else {
-					Files.copy(input.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					if (metadata != null) {
+						FileUtils.writeFile(FileUtils.stripMetadataBlock(input), output);
+					} else {
+						Files.copy(input.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
+					}
 				}
 			} catch (IOException e) {
 				throw new RuntimeException("Couldn't generate " + output.getPath() + " from file " + input.getPath() + ".", e);
