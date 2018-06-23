@@ -84,8 +84,13 @@ public class FileUtils {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/mm/dd");
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
+			if (reader.read() != '+') return null;
+			if (reader.read() != '+') return null;
+			if (reader.read() != '+') return null;
+
 			String line = reader.readLine();
-			if (!line.equals("+++")) return null;
+			if (line == null) return null;
 
 			// we are likely in a meta data block, read the key value pairs
 			Map<String, Object> metadata = new HashMap<String, Object>();

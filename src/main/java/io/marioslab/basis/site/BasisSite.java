@@ -27,8 +27,10 @@ import io.marioslab.basis.template.Template;
 import io.marioslab.basis.template.TemplateContext;
 import io.marioslab.basis.template.TemplateLoader.FileTemplateLoader;
 
+@SuppressWarnings("restriction")
 public class BasisSite {
 
+	@SuppressWarnings("unchecked")
 	public BasisSite (Configuration config) {
 		validateConfiguration(config);
 		generate(config);
@@ -127,24 +129,9 @@ public class BasisSite {
 						TemplateContext context = new TemplateContext();
 						context.set("file", new SiteFile(input.getParent(), input.getName(), output.getParent(), output.getName(), false, metadata));
 
-						context.set("formatDate", (BiFunction<String, Date, String>) (String format, Date date) -> {
-							return new SimpleDateFormat(format).format(date);
-						});
-
-						context.set("listFiles", (Function<String, List<SiteFile>>) (String dir) -> {
-							List<SiteFile> files = new ArrayList<SiteFile>();
-							File directory = new File(dir);
-							File[] children = directory.listFiles();
-							if (children != null) {
-								for (File child : children) {
-									File childOutput = new File(config.getOutput(),
-										child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
-									files.add(new SiteFile(child.getParent(), child.getName(), childOutput.getParent(), childOutput.getName(), child.isDirectory(),
-										FileUtils.readMetadataBlock(child)));
-								}
-							}
-							return files;
-						});
+						for (FunctionProvider provider : config.getFunctionProviders()) {
+							provider.provide(input, output, config, context);
+						}
 
 						try {
 							template.render(context, out);
@@ -191,42 +178,8 @@ public class BasisSite {
 	}
 
 	public static void main (String[] args) {
-		Configuration config = parseArguments(args);
+		Configuration config = Configuration.parse(args);
 		new BasisSite(config);
-	}
-
-	public static Configuration parseArguments (String[] args) {
-		File input = null;
-		File output = null;
-		boolean deleteOutput = false;
-		boolean watch = false;
-
-		int i = 0;
-		while (i < args.length) {
-			String arg = args[i];
-
-			if (arg.equals("-i")) {
-				i++;
-				if (args.length == i) error("Expected an input directory");
-				input = new File(args[i]);
-			} else if (arg.equals("-o")) {
-				i++;
-				if (args.length == i) error("Expected an output directory");
-				output = new File(args[i]);
-			} else if (arg.equals("-w")) {
-				watch = true;
-			} else if (arg.equals("-d")) {
-				deleteOutput = true;
-			} else {
-				error("Unknown argument '" + arg + "'");
-			}
-			i++;
-		}
-
-		if (input == null) error("Expected an input directory.");
-		if (output == null) error("Expected an output directory.");
-
-		return new Configuration(input, output, deleteOutput, watch);
 	}
 
 	private static void printHelp () {
@@ -239,17 +192,17 @@ public class BasisSite {
 		System.out.println("                        regenerate the site.");
 	}
 
-	private static void log (String message) {
+	public static void log (String message) {
 		System.out.println(message);
 	}
 
-	private static void error (String message) {
+	public static void error (String message) {
 		System.err.println("Error: " + message);
 		printHelp();
 		System.exit(-1);
 	}
 
-	private static void warning (String message) {
+	public static void warning (String message) {
 		System.out.println("Warning: " + message);
 	}
 }
