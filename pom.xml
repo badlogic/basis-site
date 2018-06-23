@@ -45,7 +45,7 @@
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<additionalparam>-Xdoclint:none</additionalparam>
 
-		<basistemplate.version>1.2-SNAPSHOT</basistemplate.version>
+		<basistemplate.version>1.3-SNAPSHOT</basistemplate.version>
 		<junit.version>4.12</junit.version>
 	</properties>
 
