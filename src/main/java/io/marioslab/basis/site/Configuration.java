@@ -44,7 +44,7 @@ public class Configuration {
 		return providers;
 	}
 
-	public static Configuration parse (String[] args) {
+	public static Configuration parse (String[] args, ConfigurationExtension... extensions) {
 		File input = null;
 		File output = null;
 		boolean deleteOutput = false;
@@ -67,7 +67,18 @@ public class Configuration {
 			} else if (arg.equals("-d")) {
 				deleteOutput = true;
 			} else {
-				BasisSite.fatalError("Unknown argument '" + arg + "'", true);
+				boolean parsed = false;
+				for (ConfigurationExtension ext : extensions) {
+					int result = ext.parseArgument(args, i);
+					if (result > -1) {
+						i = result;
+						parsed = true;
+						break;
+					}
+				}
+				if (!parsed) {
+					BasisSite.fatalError("Unknown argument '" + arg + "'", true);
+				}
 			}
 			i++;
 		}
@@ -75,6 +86,16 @@ public class Configuration {
 		if (input == null) BasisSite.fatalError("Expected an input directory.", true);
 		if (output == null) BasisSite.fatalError("Expected an output directory.", true);
 
+		for (ConfigurationExtension ext : extensions) {
+			ext.validate();
+		}
+
 		return new Configuration(input, output, deleteOutput, watch);
+	}
+
+	public interface ConfigurationExtension {
+		public int parseArgument (String[] args, int index);
+
+		public void validate ();
 	}
 }
