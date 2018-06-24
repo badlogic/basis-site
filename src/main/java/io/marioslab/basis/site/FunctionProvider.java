@@ -10,12 +10,18 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import io.marioslab.basis.template.TemplateContext;
 
 /** Provides functions to a template by setting them on a {@link TemplateContext}. You can specify providers for site generation
  * via the {@link Configuration} class. **/
 public interface FunctionProvider {
+
+	@FunctionalInterface
+	public interface VoidFunction<S> {
+		void apply (S s);
+	}
 
 	@FunctionalInterface
 	public interface TriFunction<S, T, U, R> {
@@ -30,19 +36,12 @@ public interface FunctionProvider {
 	public void provide (File input, File output, Configuration config, TemplateContext context);
 
 	public static class BuiltinFunctionProvider implements FunctionProvider {
-		@SuppressWarnings("unchecked")
-		@Override
-		public void provide (File input, File output, Configuration config, TemplateContext context) {
-			context.set("formatDate", (BiFunction<String, Date, String>) (String format, Date date) -> {
-				return new SimpleDateFormat(format).format(date);
-			});
+		private void list (Configuration config, File directory, List<SiteFile> files, boolean withMetadataOnly, boolean recursive) {
+			File[] children = directory.listFiles();
+			if (children != null) {
+				for (File child : children) {
 
-			context.set("listFiles", (BiFunction<String, Boolean, List<SiteFile>>) (String dir, Boolean withMetadataOnly) -> {
-				List<SiteFile> files = new ArrayList<SiteFile>();
-				File directory = new File(dir);
-				File[] children = directory.listFiles();
-				if (children != null) {
-					for (File child : children) {
+					if (child.isFile()) {
 						Map<String, Object> metadata = FileUtils.readMetadataBlock(child);
 
 						if ((withMetadataOnly && metadata != null) || !withMetadataOnly) {
@@ -50,8 +49,24 @@ public interface FunctionProvider {
 								child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
 							files.add(new SiteFile(child.getParent(), child.getName(), childOutput.getParent(), childOutput.getName(), child.isDirectory(), metadata));
 						}
+					} else if (child.isDirectory() && recursive) {
+						list(config, child, files, withMetadataOnly, recursive);
 					}
 				}
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void provide (File input, File output, Configuration config, TemplateContext context) {
+			context.set("formatDate", (BiFunction<String, Date, String>) (String format, Date date) -> {
+				return new SimpleDateFormat(format).format(date);
+			});
+
+			context.set("listFiles", (TriFunction<String, Boolean, Boolean, List<SiteFile>>) (String dir, Boolean withMetadataOnly, Boolean recursive) -> {
+				List<SiteFile> files = new ArrayList<SiteFile>();
+				File directory = new File(input.getParentFile(), dir);
+				list(config, directory, files, withMetadataOnly, recursive);
 				return files;
 			});
 

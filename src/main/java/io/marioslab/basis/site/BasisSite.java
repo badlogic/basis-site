@@ -56,15 +56,16 @@ public class BasisSite {
 					}
 
 					if (!key.reset()) {
-						error("Watching input directory for changes failed.");
+						fatalError("Watching input directory for changes failed.", false);
 					}
 
 					log("File changes detected.");
+
 					generate(config);
 				}
 
 			} catch (IOException | InterruptedException e) {
-				error("Watching input directory for changes failed. " + e.getMessage());
+				fatalError("Watching input directory for changes failed. " + e.getMessage(), false);
 			}
 		}
 	}
@@ -85,10 +86,14 @@ public class BasisSite {
 	}
 
 	private void generate (Configuration config) {
-		if (config.isDeleteOutput()) deleteAndCreateOutput(config);
-		log("Generating site.");
+		try {
+			if (config.isDeleteOutput()) deleteAndCreateOutput(config);
+			log("Generating site.");
 
-		generate(config.getInput(), config);
+			generate(config.getInput(), config);
+		} catch (RuntimeException e) {
+			System.err.println(e.getMessage());
+		}
 	}
 
 	private void generate (File input, Configuration config) {
@@ -155,24 +160,24 @@ public class BasisSite {
 
 	private void deleteAndCreateOutput (Configuration config) {
 		log("Deleting output directory " + config.getOutput().getPath() + ".");
-		FileUtils.delete(config.getOutput());
+		FileUtils.delete(config.getOutput(), true);
 		if (!config.getOutput().mkdirs()) {
-			error("Couldn't create output directory " + config.getOutput().getPath() + ".");
+			fatalError("Couldn't create output directory " + config.getOutput().getPath() + ".", false);
 		}
 	}
 
 	private void validateConfiguration (Configuration config) {
-		if (!config.getInput().exists()) error("Input directory " + config.getInput().getPath() + " does not exist.");
+		if (!config.getInput().exists()) fatalError("Input directory " + config.getInput().getPath() + " does not exist.", false);
 
 		if (config.getOutput().exists()) {
 			if (!config.getOutput().isDirectory()) {
-				error("Output directory " + config.getOutput().getPath() + " is an existing file.");
+				fatalError("Output directory " + config.getOutput().getPath() + " is an existing file.", false);
 			} else {
 				warning("Output directory " + config.getOutput().getPath() + " exists.");
 			}
 		} else {
 			if (!config.getOutput().mkdirs()) {
-				error("Couldn't create output directory " + config.getOutput().getPath() + ".");
+				fatalError("Couldn't create output directory " + config.getOutput().getPath() + ".", false);
 			}
 		}
 	}
@@ -198,7 +203,11 @@ public class BasisSite {
 
 	public static void error (String message) {
 		System.err.println("Error: " + message);
-		printHelp();
+	}
+
+	public static void fatalError (String message, boolean printHelp) {
+		System.err.println("Error: " + message);
+		if (printHelp) printHelp();
 		System.exit(-1);
 	}
 

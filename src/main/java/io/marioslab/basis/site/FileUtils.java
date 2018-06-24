@@ -6,24 +6,22 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FileUtils {
-	public static void delete (File file) {
+	public static void delete (File file, boolean first) {
 		if (!file.exists()) return;
 
 		if (file.isDirectory()) {
 			File[] children = file.listFiles();
 			if (children == null) throw new RuntimeException("Could not read files in directory " + file.getPath());
 			for (File child : children) {
-				delete(child);
+				delete(child, false);
 			}
 			if (!file.delete()) throw new RuntimeException("Could not delete directory " + file.getPath());
 		} else {
@@ -80,8 +78,8 @@ public class FileUtils {
 	 * </p>
 	 */
 	public static Map<String, Object> readMetadataBlock (File file) {
-		SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/mm/dd hh:mm:ss");
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/mm/dd");
+		SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 

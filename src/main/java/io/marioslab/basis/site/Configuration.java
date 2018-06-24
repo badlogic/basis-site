@@ -56,24 +56,24 @@ public class Configuration {
 
 			if (arg.equals("-i")) {
 				i++;
-				if (args.length == i) BasisSite.error("Expected an input directory");
+				if (args.length == i) BasisSite.fatalError("Expected an input directory", true);
 				input = new File(args[i]);
 			} else if (arg.equals("-o")) {
 				i++;
-				if (args.length == i) BasisSite.error("Expected an output directory");
+				if (args.length == i) BasisSite.fatalError("Expected an output directory", true);
 				output = new File(args[i]);
 			} else if (arg.equals("-w")) {
 				watch = true;
 			} else if (arg.equals("-d")) {
 				deleteOutput = true;
 			} else {
-				BasisSite.error("Unknown argument '" + arg + "'");
+				BasisSite.fatalError("Unknown argument '" + arg + "'", true);
 			}
 			i++;
 		}
 
-		if (input == null) BasisSite.error("Expected an input directory.");
-		if (output == null) BasisSite.error("Expected an output directory.");
+		if (input == null) BasisSite.fatalError("Expected an input directory.", true);
+		if (output == null) BasisSite.fatalError("Expected an output directory.", true);
 
 		return new Configuration(input, output, deleteOutput, watch);
 	}
