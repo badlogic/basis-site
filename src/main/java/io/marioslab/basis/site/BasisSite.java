@@ -118,22 +118,25 @@ public class BasisSite {
 				if (input.getName().contains(".bt.")) {
 					Template template = null;
 					if (metadata == null) {
-						template = new FileTemplateLoader(input.getParentFile()).load(input.getName());
+						template = new FileTemplateLoader().load(input.getPath());
 					} else {
-						template = new FileTemplateLoader(input.getParentFile()) {
+						template = new FileTemplateLoader() {
 							@Override
 							protected Source loadSource (String path) {
-								if (path.equals(input.getName())) {
+								if (path.equals(input.getPath())) {
 									return new Source(path, FileUtils.stripMetadataBlock(input));
 								} else {
 									return super.loadSource(path);
 								}
 							}
-						}.load(input.getName());
+						}.load(input.getPath());
 					}
 					try (OutputStream out = new FileOutputStream(output)) {
 						TemplateContext context = new TemplateContext();
-						context.set("file", new SiteFile(input.getParent(), input.getName(), output.getParent(), output.getName(), false, metadata));
+						String inputPath = input.getParent().indexOf('/') >= 0 ? input.getParent().substring(input.getParent().indexOf('/') + 1) : input.getParent();
+						String outputPath = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1)
+							: input.getParent();
+						context.set("file", new SiteFile(inputPath, input.getName(), outputPath, output.getName(), false, metadata));
 
 						for (FunctionProvider provider : config.getFunctionProviders()) {
 							provider.provide(input, output, config, context);

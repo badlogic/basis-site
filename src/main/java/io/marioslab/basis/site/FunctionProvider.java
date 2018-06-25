@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import io.marioslab.basis.template.TemplateContext;
 
@@ -40,14 +39,19 @@ public interface FunctionProvider {
 			File[] children = directory.listFiles();
 			if (children != null) {
 				for (File child : children) {
-
 					if (child.isFile()) {
 						Map<String, Object> metadata = FileUtils.readMetadataBlock(child);
-
 						if ((withMetadataOnly && metadata != null) || !withMetadataOnly) {
-							File childOutput = new File(config.getOutput(),
-								child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
-							files.add(new SiteFile(child.getParent(), child.getName(), childOutput.getParent(), childOutput.getName(), child.isDirectory(), metadata));
+							File output = new File(config.getOutput(), child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
+
+							File input = child;
+							String inputPath = input.getParent().indexOf('/') >= 0 ? input.getParent().substring(input.getParent().indexOf('/') + 1)
+								: input.getParent();
+							String outputPath = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1)
+								: input.getParent();
+							inputPath = inputPath.replace("/./", "/");
+							outputPath = outputPath.replace("/./", "/");
+							files.add(new SiteFile(inputPath, child.getName(), outputPath, output.getName(), child.isDirectory(), metadata));
 						}
 					} else if (child.isDirectory() && recursive) {
 						list(config, child, files, withMetadataOnly, recursive);
