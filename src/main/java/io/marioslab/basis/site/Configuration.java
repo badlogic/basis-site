@@ -56,11 +56,11 @@ public class Configuration {
 
 			if (arg.equals("-i")) {
 				i++;
-				if (args.length == i) BasisSite.fatalError("Expected an input directory", true);
+				if (args.length == i) BasisSite.fatalError("Expected an input directory", true, extensions);
 				input = new File(args[i]);
 			} else if (arg.equals("-o")) {
 				i++;
-				if (args.length == i) BasisSite.fatalError("Expected an output directory", true);
+				if (args.length == i) BasisSite.fatalError("Expected an output directory", true, extensions);
 				output = new File(args[i]);
 			} else if (arg.equals("-w")) {
 				watch = true;
@@ -83,8 +83,8 @@ public class Configuration {
 			i++;
 		}
 
-		if (input == null) BasisSite.fatalError("Expected an input directory.", true);
-		if (output == null) BasisSite.fatalError("Expected an output directory.", true);
+		if (input == null) BasisSite.fatalError("Expected an input directory.", true, extensions);
+		if (output == null) BasisSite.fatalError("Expected an output directory.", true, extensions);
 
 		for (ConfigurationExtension ext : extensions) {
 			ext.validate();
@@ -97,5 +97,7 @@ public class Configuration {
 		public int parseArgument (String[] args, int index);
 
 		public void validate ();
+
+		public void printHelp ();
 	}
 }

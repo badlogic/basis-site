@@ -23,6 +23,7 @@ import java.util.function.Function;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
 
+import io.marioslab.basis.site.Configuration.ConfigurationExtension;
 import io.marioslab.basis.template.Template;
 import io.marioslab.basis.template.TemplateContext;
 import io.marioslab.basis.template.TemplateLoader.FileTemplateLoader;
@@ -188,7 +189,7 @@ public class BasisSite {
 		new BasisSite(config);
 	}
 
-	private static void printHelp () {
+	private static void printHelp (ConfigurationExtension... extensions) {
 		System.out.println("Usage: java -jar basis-site.jar -i <input-directory> -o <output-directory>");
 		System.out.println();
 		System.out.println("-i <input-directory>    The directory to read the source files from.");
@@ -196,6 +197,9 @@ public class BasisSite {
 		System.out.println("-d                      Delete the output directory.");
 		System.out.println("-w                      Watch the input directory for changes and ");
 		System.out.println("                        regenerate the site.");
+		for (ConfigurationExtension ext: extensions) {
+			ext.printHelp();
+		}
 	}
 
 	public static void log (String message) {
@@ -206,9 +210,9 @@ public class BasisSite {
 		System.err.println("Error: " + message);
 	}
 
-	public static void fatalError (String message, boolean printHelp) {
+	public static void fatalError (String message, boolean printHelp, ConfigurationExtension... extensions) {
 		System.err.println("Error: " + message);
-		if (printHelp) printHelp();
+		if (printHelp) printHelp(extensions);
 		System.exit(-1);
 	}
 
