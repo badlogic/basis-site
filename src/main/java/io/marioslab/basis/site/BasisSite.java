@@ -93,7 +93,7 @@ public class BasisSite {
 
 			generate(config.getInput(), config);
 		} catch (RuntimeException e) {
-			System.err.println(e.getMessage());
+			error(e.getMessage());
 		}
 	}
 
@@ -142,9 +142,8 @@ public class BasisSite {
 						try {
 							template.render(context, out);
 						} catch (Throwable e) {
-							log("Error: Couldn't render templated file " + input.getPath() + ".");
-							e.printStackTrace();
-							log(e.getMessage());
+							error("Couldn't render templated file " + input.getPath() + ".");
+							System.err.println(e.getMessage());
 						}
 					}
 				} else {
@@ -154,8 +153,14 @@ public class BasisSite {
 						Files.copy(input.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
 					}
 				}
-			} catch (IOException e) {
-				throw new RuntimeException("Couldn't generate " + output.getPath() + " from file " + input.getPath() + ".", e);
+			} catch (Throwable e) {
+				if (e.getMessage() != null) {
+					error("Couldn't generate output from file " + input.getPath() + ".");
+					System.err.println(e.getMessage());
+				} else {
+					error("Couldn't generate " + output.getPath() + " from file " + input.getPath() + ".");
+					e.printStackTrace();
+				}
 			}
 		}
 	}
@@ -197,7 +202,7 @@ public class BasisSite {
 		System.out.println("-d                      Delete the output directory.");
 		System.out.println("-w                      Watch the input directory for changes and ");
 		System.out.println("                        regenerate the site.");
-		for (ConfigurationExtension ext: extensions) {
+		for (ConfigurationExtension ext : extensions) {
 			ext.printHelp();
 		}
 	}
