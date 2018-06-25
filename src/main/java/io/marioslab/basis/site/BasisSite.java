@@ -142,6 +142,7 @@ public class BasisSite {
 							template.render(context, out);
 						} catch (Throwable e) {
 							log("Error: Couldn't render templated file " + input.getPath() + ".");
+							e.printStackTrace();
 							log(e.getMessage());
 						}
 					}
