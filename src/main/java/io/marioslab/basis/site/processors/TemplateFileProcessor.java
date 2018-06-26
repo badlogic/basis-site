@@ -1,7 +1,13 @@
 
-package io.marioslab.basis.site;
+package io.marioslab.basis.site.processors;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,66 +17,130 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+import io.marioslab.basis.site.SiteFile;
+import io.marioslab.basis.site.SiteFileProcessor;
+import io.marioslab.basis.template.Template;
 import io.marioslab.basis.template.TemplateContext;
+import io.marioslab.basis.template.TemplateLoader.FileTemplateLoader;
 
-/** Provides functions to a template by setting them on a {@link TemplateContext}. You can specify providers for site generation
- * via the {@link Configuration} class. **/
-public interface FunctionProvider {
+/** Processes all files that contain the string ".bt." in their file name. The file content is interpreted as a basis-template.
+ * The output file name is stripped of the ".bt." infix. The {@link SiteFile} instance is passed to the template via the variable
+ * <code>file</code>. */
+public class TemplateFileProcessor implements SiteFileProcessor {
+	private final List<FunctionProvider> functionProviders;
 
-	@FunctionalInterface
-	public interface VoidFunction<S> {
-		void apply (S s);
+	/** Constructs a new processor. The {@link FunctionProvider} instances will be called on every processed template file to set
+	 * variables and functions on the {@link TemplateContext} passed to the template. */
+	public TemplateFileProcessor (List<FunctionProvider> functionProviders) {
+		this.functionProviders = functionProviders;
 	}
 
-	@FunctionalInterface
-	public interface TriFunction<S, T, U, R> {
-		R apply (S s, T t, U u);
+	@Override
+	public void process (SiteFile file) {
+		if (!file.input.getName().contains(".bt.")) return;
+
+		// Strip the output file name of the ".bt" infix
+		file.output = new File(file.output.getPath().replace(".bt.", ""));
+
+		// Load the template. Since we've already loaded it from disk,
+		// but any includes are not loaded, we have to hack the FileTemplateLoader a little.
+		Template template = null;
+		template = new FileTemplateLoader() {
+			@Override
+			protected Source loadSource (String path) {
+				if (path.equals(file.input.getPath())) {
+					try {
+						return new Source(path, new String(file.content, "UTF-8"));
+					} catch (UnsupportedEncodingException e) {
+						throw new RuntimeException(e);
+					}
+				} else {
+					return super.loadSource(path);
+				}
+			}
+		}.load(file.input.getPath());
+
+		TemplateContext context = new TemplateContext();
+		context.set("file", file);
+		for (FunctionProvider provider : functionProviders)
+			provider.provide(file, context);
+
+		ByteArrayOutputStream newContent = new ByteArrayOutputStream(file.content.length);
+		template.render(context, newContent);
+		try {
+			newContent.flush();
+		} catch (IOException e) {
+			// This should never happen...
+		}
+		file.content = newContent.toByteArray();
 	}
 
-	@FunctionalInterface
-	public interface QuadFunction<S, T, U, V, R> {
-		R apply (S s, T t, U u, V v);
-	}
+	/** Provides functions to a template by setting them on a {@link TemplateContext}. Used by a {@link TemplateFileProcessor} to
+	 * expose functionality to templated files. **/
+	public interface FunctionProvider {
 
-	public void provide (File input, File output, Configuration config, TemplateContext context);
+		@FunctionalInterface
+		public interface VoidFunction<S> {
+			void apply (S s);
+		}
+
+		@FunctionalInterface
+		public interface TriFunction<S, T, U, R> {
+			R apply (S s, T t, U u);
+		}
+
+		@FunctionalInterface
+		public interface QuadFunction<S, T, U, V, R> {
+			R apply (S s, T t, U u, V v);
+		}
+
+		public void provide (SiteFile file, TemplateContext context);
+	}
 
 	public static class BuiltinFunctionProvider implements FunctionProvider {
-		private void list (Configuration config, File directory, List<SiteFile> files, boolean withMetadataOnly, boolean recursive) {
+		private final File inputDirectory;
+		private final File outputDirectory;
+
+		public BuiltinFunctionProvider (File inputDirectory, File outputDirectory) {
+			this.inputDirectory = inputDirectory;
+			this.outputDirectory = outputDirectory;
+		}
+
+		private void list (File directory, List<SiteFile> files, boolean withMetadataOnly, boolean recursive) {
 			File[] children = directory.listFiles();
 			if (children != null) {
 				for (File child : children) {
 					if (child.isFile()) {
-						Map<String, Object> metadata = FileUtils.readMetadataBlock(child);
-						if ((withMetadataOnly && metadata != null) || !withMetadataOnly) {
-							File output = new File(config.getOutput(), child.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
-
-							File input = child;
-							String inputPath = input.getParent().indexOf('/') >= 0 ? input.getParent().substring(input.getParent().indexOf('/') + 1)
-								: input.getParent();
-							String outputPath = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1)
-								: input.getParent();
-							inputPath = inputPath.replace("/./", "/");
-							outputPath = outputPath.replace("/./", "/");
-							files.add(new SiteFile(inputPath, child.getName(), outputPath, output.getName(), child.isDirectory(), metadata));
+						try (InputStream in = new FileInputStream(child)) {
+							Map<String, Object> metadata = MetadataProcessor.readMetadataBlock(in);
+							if ((withMetadataOnly && metadata != null) || !withMetadataOnly) {
+								File output = new File(outputDirectory, child.getAbsolutePath().replace(".bt.", ".").replace(inputDirectory.getAbsolutePath(), ""));
+								SiteFile file = new SiteFile(child, output, new byte[0]);
+								files.add(file);
+							}
+						} catch (FileNotFoundException e) {
+							throw new RuntimeException("Couldn't open file " + child.getPath() + ".", e);
+						} catch (IOException e) {
+							throw new RuntimeException("Couldn't open file " + child.getPath() + ".", e);
 						}
 					} else if (child.isDirectory() && recursive) {
-						list(config, child, files, withMetadataOnly, recursive);
+						list(child, files, withMetadataOnly, recursive);
 					}
 				}
 			}
 		}
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings("rawtypes")
 		@Override
-		public void provide (File input, File output, Configuration config, TemplateContext context) {
+		public void provide (SiteFile file, TemplateContext context) {
 			context.set("formatDate", (BiFunction<String, Date, String>) (String format, Date date) -> {
 				return new SimpleDateFormat(format).format(date);
 			});
 
 			context.set("listFiles", (TriFunction<String, Boolean, Boolean, List<SiteFile>>) (String dir, Boolean withMetadataOnly, Boolean recursive) -> {
 				List<SiteFile> files = new ArrayList<SiteFile>();
-				File directory = new File(input.getParentFile(), dir);
-				list(config, directory, files, withMetadataOnly, recursive);
+				File directory = new File(inputDirectory.getParentFile(), dir);
+				list(directory, files, withMetadataOnly, recursive);
 				return files;
 			});
 

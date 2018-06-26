@@ -1,52 +1,53 @@
 
-package io.marioslab.basis.site;
+package io.marioslab.basis.site.processors;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-public class FileUtils {
-	public static void delete (File file, boolean first) {
-		if (!file.exists()) return;
+import io.marioslab.basis.site.SiteFile;
+import io.marioslab.basis.site.SiteFileProcessor;
+import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
 
-		if (file.isDirectory()) {
-			File[] children = file.listFiles();
-			if (children == null) throw new RuntimeException("Could not read files in directory " + file.getPath());
-			for (File child : children) {
-				delete(child, false);
-			}
-			if (!file.delete()) throw new RuntimeException("Could not delete directory " + file.getPath());
-		} else {
-			if (!file.delete()) throw new RuntimeException("Could not delete file " + file.getPath());
-		}
+/**
+ * <p>
+ * Checks if the file starts with a metadata block, reads the metadata and stores it in the SiteFile, and replaces the current
+ * content of the SiteFile with content stripped of the metadata block. The stripped block is replaced with new lines to retain
+ * line numbers. See {@link #readMetadataBlock(byte[])} for a definition of metadata. */
+public class MetadataProcessor implements SiteFileProcessor {
+	@Override
+	public void process (SiteFile file) {
+		Map<String, Object> metadata = readMetadataBlock(new ByteArrayInputStream(file.content));
+		if (metadata == null) return;
+
+		for (String key : metadata.keySet())
+			file.metadata.put(key, metadata.get(key));
+
+		file.content = stripMetadataBlock(file);
 	}
 
-	public static void writeFile (String content, File output) {
-		try {
-			Files.write(output.toPath(), content.getBytes("UTF-8"));
-		} catch (IOException e) {
-			throw new RuntimeException("Couldn't write to file " + output.getPath() + ".", e);
-		}
-	}
-
-	public static String stripMetadataBlock (File input) {
+	/** Stripes the metadata block from the site file's content and replaces it with empty lines to retain line numbers. **/
+	public static byte[] stripMetadataBlock (SiteFile file) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		try (BufferedReader reader = new BufferedReader(new FileReader(input)); BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(file.content)));
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"))) {
+
+			// strip metadata block and replace it with new lines
 			String line = reader.readLine();
 			if (line.equals("+++")) {
-				// strip metadata block
 				while (!"+++".equals((line = reader.readLine())))
-					;
+					writer.write("\n");
+				writer.write("\n");
 			}
 
+			// write out the remaining content
 			line = reader.readLine();
 			while (line != null) {
 				writer.write(line);
@@ -55,9 +56,9 @@ public class FileUtils {
 			}
 
 			writer.flush();
-			return new String(out.toByteArray());
+			return out.toByteArray();
 		} catch (Throwable t) {
-			throw new RuntimeException(t);
+			throw new SiteGeneratorException("Couldn't strip metadata block from file " + file.input.getPath() + ".", t);
 		}
 	}
 
@@ -69,7 +70,7 @@ public class FileUtils {
 	 * </p>
 	 *
 	 * <p>
-	 * Values are converted to booleans, ints, floats, dates (format yyyy/mm/dd hh:mm:ss, or yyyy/mm/dd) or strings if possible.
+	 * Values are converted to booleans, ints, floats, dates (format "yyyy/mm/dd hh:mm:ss" or "yyyy/mm/dd") or strings if possible.
 	 * </p>
 	 *
 	 * <p>
@@ -77,11 +78,11 @@ public class FileUtils {
 	 * returned.
 	 * </p>
 	 */
-	public static Map<String, Object> readMetadataBlock (File file) {
+	public static Map<String, Object> readMetadataBlock (InputStream in) {
 		SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
 
-		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
 
 			if (reader.read() != '+') return null;
 			if (reader.read() != '+') return null;

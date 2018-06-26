@@ -31,59 +31,19 @@ import io.marioslab.basis.template.TemplateLoader.FileTemplateLoader;
 @SuppressWarnings("restriction")
 public class BasisSite {
 
-	@SuppressWarnings("unchecked")
-	public BasisSite (Configuration config) {
-		validateConfiguration(config);
-		generate(config);
-		if (config.isWatch()) {
-			try {
-				WatchService watcher = FileSystems.getDefault().newWatchService();
-				registerDirectories(watcher, config.getInput());
+	private static void deleteDirectory (File file, boolean first) {
+		if (!file.exists()) return;
 
-				while (true) {
-					log("Watching input directory " + config.getInput().getPath());
-					WatchKey key = watcher.take();
-
-					for (WatchEvent<?> event : key.pollEvents()) {
-						WatchEvent.Kind<?> kind = event.kind();
-						if (kind == StandardWatchEventKinds.OVERFLOW) continue;
-
-						WatchEvent<Path> ev = (WatchEvent<Path>)event;
-						Path filename = ev.context();
-						File file = filename.toFile();
-						if (file.exists() && file.isDirectory()) {
-							registerDirectories(watcher, file);
-						}
-					}
-
-					if (!key.reset()) {
-						fatalError("Watching input directory for changes failed.", false);
-					}
-
-					log("File changes detected.");
-
-					generate(config);
-				}
-
-			} catch (IOException | InterruptedException e) {
-				fatalError("Watching input directory for changes failed. " + e.getMessage(), false);
-			}
-		}
-	}
-
-	private void registerDirectories (WatchService watcher, File dir) throws IOException {
-		if (!dir.isDirectory()) return;
-		dir.toPath().register(watcher,
-			new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY},
-			SensitivityWatchEventModifier.HIGH);
-
-		File[] children = dir.listFiles();
-		if (children != null) {
+		if (file.isDirectory()) {
+			File[] children = file.listFiles();
+			if (children == null) throw new RuntimeException("Could not read files in directory " + file.getPath());
 			for (File child : children) {
-				if (child.isDirectory()) registerDirectories(watcher, child);
+				delete(child, false);
 			}
+			if (!file.delete()) throw new RuntimeException("Could not delete directory " + file.getPath());
+		} else {
+			if (!file.delete()) throw new RuntimeException("Could not delete file " + file.getPath());
 		}
-
 	}
 
 	private void generate (Configuration config) {
@@ -91,80 +51,8 @@ public class BasisSite {
 			if (config.isDeleteOutput()) deleteAndCreateOutput(config);
 			log("Generating site.");
 
-			generate(config.getInput(), config);
 		} catch (RuntimeException e) {
 			error(e.getMessage());
-		}
-	}
-
-	private void generate (File input, Configuration config) {
-		if (input.getName().startsWith("_")) return;
-
-		if (!input.exists()) return;
-
-		File output = new File(config.getOutput(), input.getAbsolutePath().replace(".bt.", ".").replace(config.getInput().getAbsolutePath(), ""));
-
-		if (input.isDirectory()) {
-			if (!output.exists() && !output.mkdirs()) throw new RuntimeException("Couldn't create output directory " + output.getPath() + ".");
-			File[] children = input.listFiles();
-			if (children == null) throw new RuntimeException("Couldn't read directory " + input.getPath() + ".");
-			for (File child : children) {
-				generate(child, config);
-			}
-		} else {
-			try {
-				Map<String, Object> metadata = FileUtils.readMetadataBlock(input);
-
-				if (input.getName().contains(".bt.")) {
-					Template template = null;
-					if (metadata == null) {
-						template = new FileTemplateLoader().load(input.getPath());
-					} else {
-						template = new FileTemplateLoader() {
-							@Override
-							protected Source loadSource (String path) {
-								if (path.equals(input.getPath())) {
-									return new Source(path, FileUtils.stripMetadataBlock(input));
-								} else {
-									return super.loadSource(path);
-								}
-							}
-						}.load(input.getPath());
-					}
-					try (OutputStream out = new FileOutputStream(output)) {
-						TemplateContext context = new TemplateContext();
-						String inputPath = input.getParent().indexOf('/') >= 0 ? input.getParent().substring(input.getParent().indexOf('/') + 1) : input.getParent();
-						String outputPath = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1)
-							: input.getParent();
-						context.set("file", new SiteFile(inputPath, input.getName(), outputPath, output.getName(), false, metadata));
-
-						for (FunctionProvider provider : config.getFunctionProviders()) {
-							provider.provide(input, output, config, context);
-						}
-
-						try {
-							template.render(context, out);
-						} catch (Throwable e) {
-							error("Couldn't render templated file " + input.getPath() + ".");
-							System.err.println(e.getMessage());
-						}
-					}
-				} else {
-					if (metadata != null) {
-						FileUtils.writeFile(FileUtils.stripMetadataBlock(input), output);
-					} else {
-						Files.copy(input.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING);
-					}
-				}
-			} catch (Throwable e) {
-				if (e.getMessage() != null) {
-					error("Couldn't generate output from file " + input.getPath() + ".");
-					System.err.println(e.getMessage());
-				} else {
-					error("Couldn't generate " + output.getPath() + " from file " + input.getPath() + ".");
-					e.printStackTrace();
-				}
-			}
 		}
 	}
 
@@ -216,12 +104,6 @@ public class BasisSite {
 
 	public static void error (String message) {
 		System.err.println("Error: " + message);
-	}
-
-	public static void fatalError (String message, boolean printHelp, ConfigurationExtension... extensions) {
-		System.err.println("Error: " + message);
-		if (printHelp) printHelp(extensions);
-		System.exit(-1);
 	}
 
 	public static void warning (String message) {
