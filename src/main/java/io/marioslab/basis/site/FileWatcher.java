@@ -14,7 +14,12 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
 
 import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
 
+@SuppressWarnings("restriction")
 public class FileWatcher {
+	private FileWatcher () {
+	}
+
+	@SuppressWarnings("unchecked")
 	public static void watch (File directory, Runnable onChange) {
 		try {
 			WatchService watcher = FileSystems.getDefault().newWatchService();

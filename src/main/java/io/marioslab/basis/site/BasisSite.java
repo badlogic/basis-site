@@ -2,43 +2,64 @@
 package io.marioslab.basis.site;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.Arrays;
 
-import com.sun.nio.file.SensitivityWatchEventModifier;
+import com.esotericsoftware.minlog.Log;
 
-import io.marioslab.basis.site.Configuration.ConfigurationExtension;
-import io.marioslab.basis.template.Template;
-import io.marioslab.basis.template.TemplateContext;
-import io.marioslab.basis.template.TemplateLoader.FileTemplateLoader;
+import io.marioslab.basis.arguments.Argument;
+import io.marioslab.basis.arguments.ArgumentWithValue.StringArgument;
+import io.marioslab.basis.arguments.Arguments;
+import io.marioslab.basis.arguments.Arguments.ParsedArguments;
+import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
+import io.marioslab.basis.site.processors.TemplateFileProcessor;
+import io.marioslab.basis.site.processors.TemplateFileProcessor.BuiltinFunctionProvider;
 
-@SuppressWarnings("restriction")
 public class BasisSite {
+	private final SiteGenerator generator;
+	private final boolean watch;
+	private final boolean deleteOutputDirectory;
 
-	private static void deleteDirectory (File file, boolean first) {
+	/** Constructs a basis site from {@link ParsedArguments} as created by {@link #createDefaultArguments()}. Throws a
+	 * {@link SiteGeneratorException} if the arguments are invalid. **/
+	public BasisSite (ParsedArguments args) {
+		watch = args.has("-w");
+		deleteOutputDirectory = args.has("-d");
+		File inputDirectory = new File((String)args.getValue("-i"));
+		File outputDirectory = new File((String)args.getValue("-o"));
+		if (args.has("-v")) Log.set(Log.LEVEL_DEBUG);
+
+		if (!inputDirectory.exists()) {
+			throw new SiteGeneratorException("Input directory " + inputDirectory.getPath() + " does not exist.");
+		}
+
+		if (!outputDirectory.exists()) {
+			if (!outputDirectory.mkdirs()) {
+				throw new SiteGeneratorException("Couldn't create output directory " + outputDirectory.getPath() + ".");
+			}
+		}
+
+		generator = new SiteGenerator(inputDirectory, outputDirectory);
+		generator.getProcessors().add(new TemplateFileProcessor(Arrays.asList(new BuiltinFunctionProvider(generator))));
+	}
+
+	/** Constructs a new basis site.
+	 * @param generator The {@link SiteGenerator} to use to generate the site.
+	 * @param watch Whether to watch the input directory for changes.
+	 * @param deleteOutputDirectory Whether to delete the output directory before (re-)generating from the input. */
+	public BasisSite (SiteGenerator generator, boolean watch, boolean deleteOutputDirectory) {
+		this.generator = generator;
+		this.watch = watch;
+		this.deleteOutputDirectory = deleteOutputDirectory;
+	}
+
+	private static void deleteFile (File file, boolean first) {
 		if (!file.exists()) return;
 
 		if (file.isDirectory()) {
 			File[] children = file.listFiles();
 			if (children == null) throw new RuntimeException("Could not read files in directory " + file.getPath());
 			for (File child : children) {
-				delete(child, false);
+				deleteFile(child, false);
 			}
 			if (!file.delete()) throw new RuntimeException("Could not delete directory " + file.getPath());
 		} else {
@@ -46,67 +67,67 @@ public class BasisSite {
 		}
 	}
 
-	private void generate (Configuration config) {
-		try {
-			if (config.isDeleteOutput()) deleteAndCreateOutput(config);
-			log("Generating site.");
-
-		} catch (RuntimeException e) {
-			error(e.getMessage());
+	private void deleteAndCreateOutput () {
+		File output = generator.getOutputDirectory();
+		Log.info("Deleting output directory " + output.getPath() + ".");
+		deleteFile(output, true);
+		if (!output.mkdirs()) {
+			Log.error("Couldn't create output directory " + output.getPath() + ".");
+			System.exit(-1);
 		}
 	}
 
-	private void deleteAndCreateOutput (Configuration config) {
-		log("Deleting output directory " + config.getOutput().getPath() + ".");
-		FileUtils.delete(config.getOutput(), true);
-		if (!config.getOutput().mkdirs()) {
-			fatalError("Couldn't create output directory " + config.getOutput().getPath() + ".", false);
-		}
-	}
+	public void generate () {
+		if (deleteOutputDirectory) deleteAndCreateOutput();
 
-	private void validateConfiguration (Configuration config) {
-		if (!config.getInput().exists()) fatalError("Input directory " + config.getInput().getPath() + " does not exist.", false);
-
-		if (config.getOutput().exists()) {
-			if (!config.getOutput().isDirectory()) {
-				fatalError("Output directory " + config.getOutput().getPath() + " is an existing file.", false);
-			} else {
-				warning("Output directory " + config.getOutput().getPath() + " exists.");
+		if (watch) {
+			try {
+				generator.generate( (file) -> {
+					Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+				});
+			} catch (Throwable t) {
+				Log.error(t.getMessage());
+				Log.debug("Exception", t);
 			}
+
+			Log.info("Watching input directory " + generator.getInputDirectory().getPath());
+			FileWatcher.watch(generator.getInputDirectory(), () -> {
+				try {
+					if (deleteOutputDirectory) deleteAndCreateOutput();
+					generator.generate( (file) -> {
+						Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+					});
+				} catch (Throwable t) {
+					Log.error(t.getMessage());
+					Log.debug("Exception", t);
+				}
+				Log.info("Watching input directory " + generator.getInputDirectory().getPath());
+			});
 		} else {
-			if (!config.getOutput().mkdirs()) {
-				fatalError("Couldn't create output directory " + config.getOutput().getPath() + ".", false);
-			}
+			generator.generate( (file) -> {
+				Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+			});
 		}
 	}
 
-	public static void main (String[] args) {
-		Configuration config = Configuration.parse(args);
-		new BasisSite(config);
+	public static Arguments createDefaultArguments () {
+		Arguments args = new Arguments();
+		args.addArgument(new StringArgument("-i", "The directory to read the source files from.", "<input-directory>", false));
+		args.addArgument(new StringArgument("-o", "The directory to write the output files to.", "<input-directory>", false));
+		args.addArgument(new Argument("-d", "Delete the output directory.", true));
+		args.addArgument(new Argument("-w", "Watch the input directory for changes and\nregenerate the site.", true));
+		args.addArgument(new Argument("-v", "Verbosely log everything.", true));
+		return args;
 	}
 
-	private static void printHelp (ConfigurationExtension... extensions) {
-		System.out.println("Usage: java -jar basis-site.jar -i <input-directory> -o <output-directory>");
-		System.out.println();
-		System.out.println("-i <input-directory>    The directory to read the source files from.");
-		System.out.println("-o <output-directory>   The directory to write the output to.");
-		System.out.println("-d                      Delete the output directory.");
-		System.out.println("-w                      Watch the input directory for changes and ");
-		System.out.println("                        regenerate the site.");
-		for (ConfigurationExtension ext : extensions) {
-			ext.printHelp();
+	public static void main (String[] cliArgs) {
+		Arguments args = createDefaultArguments();
+		try {
+			BasisSite site = new BasisSite(args.parse(cliArgs));
+			site.generate();
+		} catch (SiteGeneratorException e) {
+			Log.error(e.getMessage(), e);
+			args.printHelp(System.out);
 		}
-	}
-
-	public static void log (String message) {
-		System.out.println(message);
-	}
-
-	public static void error (String message) {
-		System.err.println("Error: " + message);
-	}
-
-	public static void warning (String message) {
-		System.out.println("Warning: " + message);
 	}
 }

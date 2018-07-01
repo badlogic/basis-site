@@ -1,4 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
@@ -45,15 +47,29 @@
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<additionalparam>-Xdoclint:none</additionalparam>
 
-		<basistemplate.version>1.4-SNAPSHOT</basistemplate.version>
+		<basisarguments.version>1.3-SNAPSHOT</basisarguments.version>
+		<basistemplate.version>1.5-SNAPSHOT</basistemplate.version>
+		<minlog.version>1.2</minlog.version>
 		<junit.version>4.12</junit.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>io.marioslab.basis</groupId>
+			<artifactId>arguments</artifactId>
+			<version>${basisarguments.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.marioslab.basis</groupId>
 			<artifactId>template</artifactId>
 			<version>${basistemplate.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.esotericsoftware.minlog</groupId>
+			<artifactId>minlog</artifactId>
+			<version>${minlog.version}</version>
 		</dependency>
 
 		<dependency>
