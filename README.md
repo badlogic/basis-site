@@ -81,7 +81,7 @@ Google will tell you how to do the same for your Gradle builds.
 # Usage
 Basis-site takes the files in an input folder, (optionally) transforms them, and writes the result to an output folder.
 
->     : Basis-site relies heavily on [basis-template](https://github.com/badlogic/basis-template). Before continuing, it's highly recommended to please read basis-template's [documentation](https://github.com/badlogic/basis-template#basis-template). You can ignore the Java parts of basis-template. Basis-site takes care of that!
+> Note: Basis-site relies heavily on [basis-template](https://github.com/badlogic/basis-template). Before continuing, it's highly recommended to please read basis-template's [documentation](https://github.com/badlogic/basis-template#basis-template). You can ignore the Java parts of basis-template. Basis-site takes care of that!
 
 ## A basic site
 Let's assume we want to generate a static site consisting of two pages, a landing page, and an about page. Both should share the same header and footer. Our input folder could look like this:
@@ -103,27 +103,27 @@ The index and about page files contain the infix `.bt` in their file names. This
 
 ```html
 <!-- index.bt.html -->
-{{include "_templates/header.html}}
+{{include "_templates/header.html"}}
 
 <h1>Welcome to my website</h1>
 
 <p>You can learn more about me on the <a href="about.html">About page</a></p>
 
-{{include "_templates/footer.html}}
+{{include "_templates/footer.html"}}
 ```
 
 ```html
 <!-- about.bt.html -->
-{{include "_templates/header.html}}
+{{include "_templates/header.html"}}
 
 <h1>About me</h1>
 
 <p>I'm a little pea, I love the birds and the trees. Go back to the <a href="index.html">landing page</a></p>
 
-{{include "_templates/footer.html}}
+{{include "_templates/footer.html"}}
 ```
 
-     how we link to `index.html` and `about.html` instead of `index.bt.html` and `about.bt.html`. This is because the output names of these two files will be stripped of the `.bt.` infix after they've been evaluated as templated files!
+Note how we link to `index.html` and `about.html` instead of `index.bt.html` and `about.bt.html`. This is because the output names of these two files will be stripped of the `.bt.` infix after they've been evaluated as templated files!
 
 The include paths are specified relative the the file the other files are included in.
 
@@ -180,6 +180,28 @@ The `style.css` and `code.js` files were copied verbatim, retaining the folder s
 2. Files containing the `.bt.` infix in their are run through the basis-template templating engine. The resulting content is written to files with the `.bt.` infixed stripped from their name.
 3. All other files and folders are copied verbatim.
 
+## Watch mode
+Having to invoke the basis-site command line app after every change of our site gets old fast. Basis-site thus lets you start it in watch mode with the `-w` flag.
+
+```bash
+$ java -jar basis-site -d -w -i input -o output
+```
+
+```
+00:00  INFO: Watching input directory input
+01:54  INFO: Deleting output directory output.
+01:54  INFO: Processed input/css/style.css -> output/css/style.css
+01:54  INFO: Processed input/js/code.js -> output/js/code.js
+01:54  INFO: Processed input/blog/hello-world/index.html -> output/blog/hello-world/index.html
+01:54  INFO: Processed input/blog/another-post/index.html -> output/blog/another-post/index.html
+01:54 ERROR: Error (input/about.bt.html:3): Expected ':', but got '='
+
+        title = "Ponyhof - About"
+              ^
+```
+
+In watch mode, basis-site will re-generate the site if a file or folder in the input directory was changed (created, modified, deleted, renamed). You can stop the app by pressing `CTRL+C`.
+
 ## Metadata
 Let's be good web citizens and set the `<title>` of each page, e.g. `Ponyhof` for the landing page, and `Ponyhof - About` for the about page.
 
@@ -192,32 +214,32 @@ The answer is basis-template. Let's add some metadata to our landing and about p
 <!-- index.bt.html -->
 {{
     metadata = {
-        title = "Ponyhof"
+        title: "Ponyhof"
     }
 }}
-{{include "_templates/header.html}}
+{{include "_templates/header.html"}}
 
 <h1>Welcome to my website</h1>
 
 <p>You can learn more about me on the <a href="about.html">About page</a></p>
 
-{{include "_templates/footer.html}}
+{{include "_templates/footer.html"}}
 ```
 
 ```html
 <!-- about.bt.html -->
 {{
     metadata = {
-        title = "Ponyhof - About"
+        title: "Ponyhof - About"
     }
 }}
-{{include "_templates/header.html}}
+{{include "_templates/header.html"}}
 
 <h1>About me</h1>
 
 <p>I'm a little pea, I love the birds and the trees. Go back to the <a href="index.html">landing page</a></p>
 
-{{include "_templates/footer.html}}
+{{include "_templates/footer.html"}}
 ```
 
 Since we define `metadata` before including the header in each file, its contents will be available to any templating code inside `header.html`.
@@ -240,7 +262,7 @@ We can now modify `header.html` to use the metadata:
    <!-- Imagine the markup for a navbar here -->
 ```
 
->     : `header.html` is evaluated as a template, even though it misses the `.bt.` infix. This is because it is included in files that basis-site evaluates as templates due to the `.bt.` infix in their names.
+> Note: `header.html` is evaluated as a template, even though it misses the `.bt.` infix. This is because it is included in files that basis-site evaluates as templates due to the `.bt.` infix in their names.
 
 When we regenerate our static content on the command line, the resulting `index.html` and `about.html` files will each have a `<title>` tag in them with their respective `metadata.title` value injected!
 
@@ -282,12 +304,12 @@ Our "Hello world" `index.html` could look like this:
 <!-- blog/hello-world/index.html -->
 {{
     metadata = {
-        title = "Hello world",
-        published = true,
-        date = "2018/06/23 21:00"
+        title: "Hello world",
+        published: true,
+        date: "2018/06/23 21:00"
     }
 }}
-{{include "../../_templates/header.html}}
+{{include "../../_templates/header.html"}}
 
 <h1>{{metadata.title}}</h1>
 <span>{{metadata.date}}</span>
@@ -296,10 +318,10 @@ Our "Hello world" `index.html` could look like this:
 
 <img src="a-nice-image.jpg">
 
-{{include "../../_templates/footer.html}}
+{{include "../../_templates/footer.html"}}
 ```
 
-We specified `metadata`, that gets used in both the `header.html` file and within the post itself.
+We specified `metadata` that gets used in both the `header.html` file and within the post itself.
 
 The "My second post" file would have the same overall structure, but with different metadata and content. It's metadata could look like this:
 
@@ -307,19 +329,19 @@ The "My second post" file would have the same overall structure, but with differ
 <!-- blog/another-post/index.html -->
 {{
     metadata = {
-        title = "Hello world",
-        published = true,
-        date = "2018/07/03 20:15"
+        title: "Another post",
+        published: false,
+        date: "2018/07/03 20:15"
     }
 }}
-... includes & content ...
+... includes and content ...
 ```
 
 Running basis-site, we'll get `output/blog/hello-world/index.html` and `output/blog/another-post/index.html` as we'd expect. It will also copy the image `a-nice-image.jpg`.
 
 Nobody will ever know about our blog posts, unless we link them from the landing page. How do we get a list of blog posts into the landing page?
 
-Basis-site provides a handful of functions to every template it evaluates, one of which is `listFiles(path, withMetadataOnly, recursive)`.
+Basis-site provides a handful of functions to every template it evaluates, one of which is `listFiles(String path, boolean withMetadataOnly, boolean recursive)`.
 
 This function will return the files in the specified path, which is relative to the input directory. E.g. `"blog/"` would return the files in the `input/blog/` directory. If we pass `true` for `withMetadataOnly`, then only files that define a `metadata` map in their first basis-template code span will be returned (like our blog post files above). Finally, if we pass `true` for `recursive`, the function will not only return the files in the specified folder, but also all files in its sub-folders.
 
@@ -327,48 +349,78 @@ We can use this function to iterate through all our blog post files (and their m
 
 ```html
 <!-- index.bt.html -->
-{{include "_templates/header.html}}
+{{
+    metadata = {
+        title: "Ponyhof"
+    }
+}}
+{{include "_templates/header.html"}}
 
 <h1>Welcome to my website</h1>
 
 <p>You can learn more about me on the <a href="about.html">About page</a></p>
 
 <h2>Blog posts</h2>
+<ul>
 {{for file in listFiles("blog/", true, true)}}
 	{{if file.metadata.published == false continue end}}
-	<span>{{file.metadata.date}}</span><a href="{{file.getURL()}}">{{file.metadata.title}}</a>
+	<li><a href="{{file.getUrl()}}">{{file.metadata.date}} - {{file.metadata.title}}</a></li>
 {{end}}
+</ul>
 
-{{include "_templates/footer.html}}
+{{include "_templates/footer.html"}}
 ```
 
-# In depth
-Basis-site is a "bring your own site structure" static site generator. It (recursively) takes files in an input directory, (optionally) transforms the files, and copies the results to an output directory.
+The call to `listFiles()` returns a `List<SiteFile>` of all the files it found (recursively) in the `blog/` folder that have a `metadata` definition in their first basis-template code span.
 
-## Processing files
-The power of basis-site stems from the transformation step. When an input file is being processed, it is passed through a (configurable) list of processors. The file is passed through the processors in the sequence specified at configuration time.
+Instances of `SiteFile` have a field `metadata` which contains the contents of the `metadata` map as specified in the template code of the file.
 
-A processor can modify both the content and the output file name of an input file. Modifications of a processor are passed to the next processor in the sequence, which in turn may modify the content and output file name again.
+We can then iterate through all these files, and for each `published` file, we output a `<li>` containing a link to the blog post, displaying the blog posts publication date and title. We use the `SiteFile#getUrl()` function to get a URL for the folder the file is contained in (e.g. `blog/hello-world/` for the `blog/hello-world/index.bt.html` file).
 
-Which files a processor transforms is up to the processor. For example, a CSS/JavaScript minifying processor would only transform the content of `.css` and `.js` files. Such a processor would decide whether to transform a file based on the input file name ending in `.css` or `.js`. That same processor may also change the output file name from the input file name, e.g. `style.css`, to a different name, e.g. `style.min.css`.
+By specifying metadata and adding 5 lines of template code to our landing page, we now have a fully functioning blog! Well, almost.
 
-Related to a CSS minifying processor, another processor earlier in the sequence could auto-prefix any non-standard CSS properties. Its output would then feed into the minifying processor. Since it only knows how to prefix CSS properties, it would only modify `.css` files, and not `.js` files.
+The order in which `listFiles()` returns the files is undefined. Basis-site provides the function `sortFiles(List<SiteFile> files, String fieldName, boolean ascending)` to all template files that allows them to sort the files by one of the metadata fields in ascending or descending order. This only works on fields that are `Comparable`, like numbers, strings or dates.
 
-Once a file has been passed through all processors, it's final content is copied to the output folder under the final output file name as determined by the processors. If no processor modified the file, its output file content and name will equal its input file content and name.
+```html
+{{for file in sortFiles(listFiles("blog/", true, true), "date", false)}}
+   ...
+{{end}}
+```
 
-Finally, as a special rule, any file or folder starting with `_`, e.g. `_normalize.css` or `_templates/`, will not be copied or processed. We will see how this can be exploited later.
+This sorts the listed files by the metadata field `date`in descending order. Great!
 
->     : While the output file names can me modified by processors, the output folder can not be modified. E.g. an input file in `input/css/` would be written to `output/css`. This may change in the future.
+But there's a problem: the `date` of each blog post is currently a string. We can change this to a `Date` by using the `parseDate(String date)` function. It expects a string of the format `yyyy/mm/dd hh:ss`, e.g. `2018/07/03 21:32`. We can change the `date` metadata in our blog posts as follows:
 
-By default, basis-site comes only with a single processor: the `TemplateFileProcessor`.
+```html
+{{
+	metadata = {
+		...
+		date: parseDate("2018/07/03"),
+		...
+	}
+}}
+```
 
-## Template file processing
-Out of the box, basis-site comes with a single processor called the template file processor (`TemplateFileProcessor` in Java). It will process any file that contains the infix `.bt.` in its file name, e.g. `header.bt.html`.
+Now the `sortFiles()` function will sort by proper date, not lexicographically by string!
 
-The processor assumes that the files it transforms are written using [basis-template](https://github.com/badlogic/basis-template), a templating engine that features a generic scripting language for high expressiveness.
+To finish off our new blog, we have to fix the formatting of the post dates when we display them on the landing page and the post pages. For that we can use the `formatDate(String dateFormat, Date date)` function:
 
+```html
+{{formatDate("yyyy/MM/dd", file.metadata.date)}}
+```
 
+The date format string follows the syntax of Java's [SimpleDateFormat](https://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html).
 
+**Key take-aways**
+1. Use the `listFiles()` functions to get a list of files with their metadata.
+2. Use the `sortFiles()` function to sort a list of files by a field in their metadata.
+3. Use the `parseDate()` and `formatDate()` functions to convert strings to `Date` instances and vice versa.
 
+# Extending and embedding
+TBD
 
+## License
+See [LICENSE](./LICENSE).
 
+## Contributing
+Simply send a PR and grant written, irrevocable permission in your PR description to publish your code under this repository's [LICENSE](./LICENSE).

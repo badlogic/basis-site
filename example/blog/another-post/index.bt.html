@@ -1,0 +1,15 @@
+{{
+    metadata = {
+        title: "Another post",
+        published: false,
+        date: "2018/07/03 20:15"
+    }
+}}
+{{include "../../_templates/header.html"}}
+
+<h1>{{metadata.title}}</h1>
+<span>{{metadata.date}}</span>
+
+<p>Another post!</p>
+
+{{include "../../_templates/footer.html"}}

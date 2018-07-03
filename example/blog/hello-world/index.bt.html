@@ -1,0 +1,17 @@
+{{
+    metadata = {
+        title: "Hello world",
+        published: true,
+        date: "2018/06/23 21:00"
+    }
+}}
+{{include "../../_templates/header.html"}}
+
+<h1>{{metadata.title}}</h1>
+<span>{{metadata.date}}</span>
+
+<p>This is my first post!</p>
+
+<img src="a-nice-image.jpg">
+
+{{include "../../_templates/footer.html"}}
