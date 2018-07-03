@@ -212,11 +212,7 @@ The answer is basis-template. Let's add some metadata to our landing and about p
 
 ```html
 <!-- index.bt.html -->
-{{
-    metadata = {
-        title: "Ponyhof"
-    }
-}}
+{{ metadata = { title: "Ponyhof" } }}
 {{include "_templates/header.html"}}
 
 <h1>Welcome to my website</h1>
@@ -228,11 +224,7 @@ The answer is basis-template. Let's add some metadata to our landing and about p
 
 ```html
 <!-- about.bt.html -->
-{{
-    metadata = {
-        title: "Ponyhof - About"
-    }
-}}
+{{ metadata = { title: "Ponyhof - About" } }}
 {{include "_templates/header.html"}}
 
 <h1>About me</h1>
@@ -349,11 +341,7 @@ We can use this function to iterate through all our blog post files (and their m
 
 ```html
 <!-- index.bt.html -->
-{{
-    metadata = {
-        title: "Ponyhof"
-    }
-}}
+{{ metadata = { title: "Ponyhof" } }}
 {{include "_templates/header.html"}}
 
 <h1>Welcome to my website</h1>
@@ -363,8 +351,8 @@ We can use this function to iterate through all our blog post files (and their m
 <h2>Blog posts</h2>
 <ul>
 {{for file in listFiles("blog/", true, true)}}
-	{{if file.metadata.published == false continue end}}
-	<li><a href="{{file.getUrl()}}">{{file.metadata.date}} - {{file.metadata.title}}</a></li>
+    {{if file.metadata.published == false continue end}}
+    <li><a href="{{file.getUrl()}}">{{file.metadata.date}} - {{file.metadata.title}}</a></li>
 {{end}}
 </ul>
 
@@ -393,11 +381,11 @@ But there's a problem: the `date` of each blog post is currently a string. We ca
 
 ```html
 {{
-	metadata = {
-		...
-		date: parseDate("2018/07/03"),
-		...
-	}
+    metadata = {
+        ...
+        date: parseDate("2018/07/03"),
+        ...
+    }
 }}
 ```
 
