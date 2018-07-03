@@ -52,7 +52,7 @@
 		<minlog.version>1.2</minlog.version>
 		<junit.version>4.12</junit.version>
 	</properties>
-	
+
 	<repositories>
 		<repository>
 			<id>oss-sonatype</id>
@@ -125,6 +125,31 @@
 				</executions>
 			</plugin>
 
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.1.0</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>io.marioslab.basis.site.BasisSite</mainClass>
+						</manifest>
+					</archive>
+					<finalName>basis-site</finalName>
+					<appendAssemblyId>false</appendAssemblyId>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>
