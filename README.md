@@ -362,7 +362,7 @@ The date format string follows the syntax of Java's [SimpleDateFormat](https://d
 3. Use the `parseDate()` and `formatDate()` functions to convert strings to `Date` instances and vice versa.
 
 ## Examples
-You can find the final result of the above tutorial in the [`example/`](example/) folder. For another example, check out the source code of [marioslab.io](https://marioslab.io) on [GitHub](https://github.com/badlogic/marioslab-site).
+You can find the final result of the above tutorial in the [`example/`](example/) folder.
 
 # Embedding and extending basis-site
 While command line usage of basis-site is likely sufficient for simple sites, you can of course also embed and extend it in code form in your JVM app.
@@ -572,8 +572,11 @@ public class BlankLineFileProcessor implements SiteFileProcessor {
 ## Logging
 Basis-site uses [minlog](https://github.com/esotericsoftware/minlog) for logging. Please see its documentation if you need to modify logging.
 
-## License
+## Examples
+Check out the source code of [marioslab.io](https://marioslab.io) on [GitHub](https://github.com/badlogic/marioslab-site). It combines basis-site (for static content generation) and [Javalin](https://javalin.io/) for dynamic parts (via HTTP RPC endpoints and some JavaScript).
+
+# License
 See [LICENSE](./LICENSE).
 
-## Contributing
+# Contributing
 Simply send a PR and grant written, irrevocable permission in your PR description to publish your code under this repository's [LICENSE](./LICENSE).
