@@ -14,10 +14,12 @@ Why another static site generator?
 * Uses a more powerful templating language than Hugo and consorts.
 * Only depends on basis-argument and basis-template, both having zero dependencies themselves.
 
-# Setup
-Basis-site can be either used as a dependency on your JVM project, or directly from the command line. If you are happy with basis-site default functionality, read the section on the setup for command line usage, and skip the section on the setup for JVM projects.
+# Usage
+Basis-site can be either used from the command line, or as a dependency of your JVM project.
 
-## Setup for the command line
+# Command line usage
+
+## Setup
 You can run the basis-site `.jar` file as an app without needing a JVM code project. All you need is an installation of Java 8+ available in your `$PATH`. You can download the latest (snapshot) version of the `.jar` from [here](https://libgdx.badlogicgames.com/ci/basis-site/basis-site.jar).
 
 You can also build the far `.jar` from source via Maven:
@@ -34,56 +36,11 @@ With Java and the `.jar` you can now start basis-site on the command line like t
 java -jar basis-site <arguments>
 ```
 
-For usage of basis-site on the command line, see below.
-
-## Setup for JVM Projects
-As a dependency of your Maven project:
-
-```
-<dependency>
-   <groupId>io.marioslab.basis</groupId>
-   <artifactId>site</artifactId>
-   <version>1.2</version>
-</dependency>
-```
-
-As a dependency of your Gradle project:
-```
-compile 'io.marioslab.basis:site:1.2'
-```
-
-You can also build the `.jar` file yourself, assuming you have Maven and JDK 1.8+ installed:
-```
-mvn clean install
-```
-
-The resulting `.jar` file will be located in the `target/` folder.
-
-You can also find `SNAPSHOT` builds of the latest and greatest changes to the master branch in the SonaType snapshots repository. The snapshot is build by [Jenkins](https://libgdx.badlogicgames.com/jenkins/job/basis-site/)
-
-To add that snapshot repository to your Maven `pom.xml` use the following snippet:
-
-```
-<repositories>
-    <repository>
-        <id>oss-sonatype</id>
-        <name>oss-sonatype</name>
-        <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        <snapshots>
-            <enabled>true</enabled>
-        </snapshots>
-    </repository>
-</repositories>
-```
-
-Google will tell you how to do the same for your Gradle builds.
-
-# Command line usage
+## A basic site
 Basis-site takes the files in an input folder, (optionally) transforms them, and writes the result to an output folder.
 
 > Note: Basis-site relies heavily on [basis-template](https://github.com/badlogic/basis-template). Before continuing, it's highly recommended to please read basis-template's [documentation](https://github.com/badlogic/basis-template#basis-template). You can ignore the Java parts of basis-template. Basis-site takes care of that!
 
-## A basic site
 Let's assume we want to generate a static site consisting of two pages, a landing page, and an about page. Both should share the same header and footer. Our input folder could look like this:
 
 ```
@@ -404,8 +361,216 @@ The date format string follows the syntax of Java's [SimpleDateFormat](https://d
 2. Use the `sortFiles()` function to sort a list of files by a field in their metadata.
 3. Use the `parseDate()` and `formatDate()` functions to convert strings to `Date` instances and vice versa.
 
-# Extending and embedding
-TBD
+## Examples
+You can find the final result of the above tutorial in the [`example/`](example/) folder. For another example, check out the source code of [marioslab.io](https://marioslab.io) on [GitHub](https://github.com/badlogic/marioslab-site).
+
+# Embedding and extending basis-site
+While command line usage of basis-site is likely sufficient for simple sites, you can of course also embed and extend it in code form in your JVM app.
+
+## Setup
+As a dependency of your Maven project:
+
+```
+<dependency>
+   <groupId>io.marioslab.basis</groupId>
+   <artifactId>site</artifactId>
+   <version>1.2</version>
+</dependency>
+```
+
+As a dependency of your Gradle project:
+```
+compile 'io.marioslab.basis:site:1.2'
+```
+
+You can also build the `.jar` file yourself, assuming you have Maven and JDK 1.8+ installed:
+```
+mvn clean install
+```
+
+The resulting `.jar` file will be located in the `target/` folder.
+
+You can also find `SNAPSHOT` builds of the latest and greatest changes to the master branch in the SonaType snapshots repository. The snapshot is build by [Jenkins](https://libgdx.badlogicgames.com/jenkins/job/basis-site/)
+
+To add that snapshot repository to your Maven `pom.xml` use the following snippet:
+
+```
+<repositories>
+    <repository>
+        <id>oss-sonatype</id>
+        <name>oss-sonatype</name>
+        <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+</repositories>
+```
+
+Google will tell you how to do the same for your Gradle builds.
+
+## Architecture
+Basis-site consists only of a handful of classes you can directly integrate in your JVM app.
+
+If you want to extend the base functionality, it is important to understand the general architecture of basis-site.
+
+As illustrated in the command line usage section, basis-site takes an input directory, processes the files it encounters, and writes the results to an output directory.
+
+This entire process is encapsulated by the [`SiteGenerator`](src/main/java/io/marioslab/basis/site/SiteGenerator.java) class. The class recursively scans the input directory, and passes each input file through a configurable list of [`SiteFileProcessor`](src/main/java/io/marioslab/basis/site/SiteFileProcessor.java) instances. Input files (and folders and their children) starting with an underscore (`_`) in their file name will be skipped and not passed to the processors.
+
+For each input file the site generator encounters, it constructs a [`SiteFile`](src/main/java/io/marioslab/basis/site/SiteFile.java) instance. A site file consists of an input file, and output file, its content (stored as a `byte[]` in the site file instance), and an optional map of metadata.
+
+A `SiteFile` created from an input file is passed to all `SiteFileProcessor` instances in the order the processors were passed to the generator. Each processor can inspect the properties of the file, and modify the file's content and output file name. When a processor modifies a `SiteFile`, the modified site file is passed to the next processor.
+
+When all processors have processed a file, the generator writes the final content to the output file in the output directory.
+
+This simple architecture allows for some interesting scenarios. Say we want to minify all `.css` and `.js` files before writing them to the output folder. We can write a simple `SiteFileProcessor` that will only process `.css` and `.js` files, which it can decide based on the input file name stored in the `SiteFile`. The processor would replace the content of the site file with its minified version, and pass the site file on to the next processor in the chain.
+
+By default, basis-site comes with a single processor called [`TemplateFileProcessor`](src/main/java/io/marioslab/basis/site/processors/TemplateFileProcessor.java). It will process any file with the infix `.bt.` in its file name and evaluate it as a [basis-template](https://gitub.com/badlogic/basis-template). The template file processor takes a list of `FunctionProvider` instances which inject functions and variables for use by the code in the template. The default implementation (as discussed in the command line usage section) is provided by `BuiltInFunctionProvider`. The input content will be replaced with the evaluation result of the template engine.
+
+Assume we have written the fabled minifying processor. We can then combine the effects of the template and minifier processor for a common use case: merging multiple `.js` files into a single file and minifying the result.
+
+A simple folder layout for this use case could look like this:
+
+```
+input/
+    js/
+        _somecode.js
+        _othercode.js
+        code.bt.js
+    ...
+```
+
+The files `_somecode.js` and `_othercode.js` implement different functionality of your site. The start with an `_`, so they will not be copied to the output directory. The `code.bt.js` file is a templated file that pulls in the other two files:
+
+```
+{{
+    include raw "_somecode.js"
+    include raw "_othercode.js"
+}}
+```
+
+When we run this input through the site generator, the template file processor would first evaluate the `code.bt.js` file. The end result of this step is a combined file consisting of the contents of `_somecode.js` and `_othercode.js`, and the stripping of the `.bt.` infix from the output file name. Next, the minifying processor would take the content and minify it. Finally, the generator would write the merged, minified JavaScript code to `output/js/code.js`.
+
+All of the out-of-the-box functionality of basis-site is pulled into the `BasisSite` class, which is the driver of the command line application. In addition
+
+## Using `BasisSite`
+The [`BasisSite`](src/main/java/io/marioslab/basis/site/BasisSite.java) class is a driver that pulls together the other classes of basis-site (`SiteGenerator`, `SiteFileProcessor`] into a simple command line app, and uses [`FileWatcher`](src/main/java/io/marioslab/basis/site/FileWatcher.java) to implement watching the input directory for changes and automatically re-generating the site. If you don't want to extend the out-of-the-box functionality, this is the class to use in your JVM app.
+
+There are two ways of embedding the class: providing it with command line arguments from which it will instantiate a `BasisSite` instance, or providing it with a `SiteGenerator` and other arguments programmatically. Here, we'll focus on construction from command line arguments.
+
+Basis-site uses [basis-arguments](https://github.com/badlogic/basis-arguments) for command line parsing. If your app that embeds basis-site also requires command line argument parsing, it's strongly recommended to built on top of basis-arguments.
+
+Here's the simplest example that supports file watcher mode and parses arguments for your own app in addition to the arguments `BasisSite` consumes:
+
+```java
+public static void main(String[] arguments) {
+    // Creates the arguments consumed by BasisSite
+    Arguments args = BasisSite.createDefaultArguments();
+
+    // Add your own arguments
+    StringArgument passwordArg = args.addArgument(new StringArgument("-p", "The password", false));
+
+    // Parse the command line arguments and construct the BasisSite instance
+    ParsedArguments parsedArgs = null;
+    BasisSite site = null;
+    try {
+        parsedArgs = args.parse(arguments)
+        site = new BasisSite(parsedArgs);
+    } catch (Throwable t) {
+        // Parsing the arguments or constructing the BasisSite instance failed
+        Log.error(t.getMessage());
+        args.printHelp();
+        System.exit(-1);
+    }
+
+    // Start the generator in a separate thread, otherwise the call
+    // to generate() will block this thread.
+    new Thread((Runnable) () -> {
+        try {
+            finalSite.generate();
+        } catch (Throwable t) {
+            Log.error(t.getMessage());
+            Log.debug("Exception", t);
+        }
+    }).start();
+
+    // The rest of your app's code goes here
+    String password = parsedArgs.getValue(passwordArg);
+    ...
+}
+```
+
+## Using `SiteGenerator` and `FileWatcher`
+If you need more customization, for example adding your own `SiteFileProcessor`, it's easiest to work with `SiteGenerator` and (optionally) `FileWatcher` directly.
+
+```java
+// Create the SiteGenerator
+SiteGenerator generator = new SiteGenerator(new File("input/"), new File("output/"));
+
+// Create the template file processor, using the built-in function provider
+BuiltinFunctionProvider builtinProvider = new BuiltinFunctionProvider(generator);
+TempalateFileProcessor templateProcessor = new TemplateFileProcessor(Arrays.asList(builtinProvider /* Add your function providers here */));
+
+// Add the processor to the generator. Add your own processors here.
+generator.addProcessor(templateProcessor);
+
+// Generate the initial output. You may want to delete the output folder before that (omitted).
+generator.generate( (file) -> {
+    Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+});
+
+// Start the file watcher. This call will block indefinitely.
+FileWatcher.watch(generator.getInputDirectory(), new Runnable() {
+    // if anything changed in the input directory, re-generate the output.
+    // You may want to delete the output folder before that (omitted).
+    generator.generate( (file) -> {
+        Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+    });
+})
+```
+
+## Writing a `SiteFileProcessor`
+Site file processors must implement the [`SiteFileProcessor](src/main/java/io/marioslab/basis/site/SiteFileProcessor.java) interface.
+
+The `SiteFileProcessor#process(SiteFile)` method can modify the content of the input file, which is then passed on to the next processor in the chain. You can inspect the `SiteFile` to decide if you want to modify the file, e.g. based on the input file name extension. You can access the content of the file via `SiteFile#getContent()`. If the file is a text file, the `byte[]` will encode the string as UTF-8. Otherwise the content is the binary content of the file. You can set new content via `SiteFile#setContent()`.
+
+The second method a site file processor must implement is the `SiteFileProcessor#processOutputFileName(String fileName)`. The method can return a modified version of the file name, e.g. remove an infix, or add characters. If no modification takes place, the passed in file name must be returned.
+
+A simple `SiteFileProcessor` that remove all blank lines in `.txt` files could look like this:
+
+```java
+public class BlankLineFileProcessor implements SiteFileProcessor {
+    @Override
+    public void process (SiteFile file) {
+        try {
+            // Remove empty lines from the content
+            String[] lines = new String(file.getContent(), "UTF-8").split("\\r?\\n");
+            StringBuilder builder = new StringBuilder();
+            for (String line : lines) {
+                if (line.trim().isEmpty()) {
+                    builder.append(line);
+                    builder.append('\n');
+                }
+            }
+
+            // Set the new content
+            file.setContent(builder.toString().getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new SiteGeneratorException("Couldn't convert content of .txt files to UTF-8 string.", e);
+        }
+    }
+
+    @Override
+    public String processOutputFileName (String fileName) {
+        // Simply return
+        return fileName;
+    }
+}
+```
+
+## Logging
+Basis-site uses [minlog](https://github.com/esotericsoftware/minlog) for logging. Please see its documentation if you need to modify logging.
 
 ## License
 See [LICENSE](./LICENSE).
