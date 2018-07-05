@@ -42,14 +42,14 @@ As a dependency of your Maven project:
 ```
 <dependency>
    <groupId>io.marioslab.basis</groupId>
-   <artifactId>arguments</artifactId>
+   <artifactId>site</artifactId>
    <version>1.2</version>
 </dependency>
 ```
 
 As a dependency of your Gradle project:
 ```
-compile 'io.marioslab.basis:arguments:1.2'
+compile 'io.marioslab.basis:site:1.2'
 ```
 
 You can also build the `.jar` file yourself, assuming you have Maven and JDK 1.8+ installed:
@@ -78,7 +78,7 @@ To add that snapshot repository to your Maven `pom.xml` use the following snippe
 
 Google will tell you how to do the same for your Gradle builds.
 
-# Usage
+# Command line usage
 Basis-site takes the files in an input folder, (optionally) transforms them, and writes the result to an output folder.
 
 > Note: Basis-site relies heavily on [basis-template](https://github.com/badlogic/basis-template). Before continuing, it's highly recommended to please read basis-template's [documentation](https://github.com/badlogic/basis-template#basis-template). You can ignore the Java parts of basis-template. Basis-site takes care of that!
