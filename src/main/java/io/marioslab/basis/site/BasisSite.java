@@ -14,6 +14,8 @@ import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
 import io.marioslab.basis.site.processors.TemplateFileProcessor;
 import io.marioslab.basis.site.processors.TemplateFileProcessor.BuiltinFunctionProvider;
 
+/** Command line application for generating static websites. See <a href="https://github.com/badlogic/basis-site">the
+ * documentation</a>. **/
 public class BasisSite {
 	private final SiteGenerator generator;
 	private final boolean watch;
@@ -39,7 +41,7 @@ public class BasisSite {
 		}
 
 		generator = new SiteGenerator(inputDirectory, outputDirectory);
-		generator.getProcessors().add(new TemplateFileProcessor(Arrays.asList(new BuiltinFunctionProvider(generator))));
+		generator.addProcessor(new TemplateFileProcessor(Arrays.asList(new BuiltinFunctionProvider(generator))));
 	}
 
 	/** Constructs a new basis site.
@@ -117,17 +119,25 @@ public class BasisSite {
 		args.addArgument(new Argument("-d", "Delete the output directory.", true));
 		args.addArgument(new Argument("-w", "Watch the input directory for changes and\nregenerate the site.", true));
 		args.addArgument(new Argument("-v", "Verbosely log everything.", true));
+		args.addArgument(new Argument("-h", "Prints this help text.", true));
 		return args;
 	}
 
 	public static void main (String[] cliArgs) {
 		Arguments args = createDefaultArguments();
 		try {
-			BasisSite site = new BasisSite(args.parse(cliArgs));
+			ParsedArguments parsedArgs = args.parse(cliArgs);
+			if (parsedArgs.has("-h")) {
+				System.out.println("Usage: java -jar basis-site.jar <options>");
+				System.out.println(args.printHelp());
+				System.exit(0);
+			}
+			BasisSite site = new BasisSite(parsedArgs);
 			site.generate();
 		} catch (SiteGeneratorException e) {
 			Log.error(e.getMessage(), e);
 			args.printHelp(System.out);
+			System.exit(-1);
 		}
 	}
 }

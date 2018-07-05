@@ -9,7 +9,8 @@ import java.util.List;
 import io.marioslab.basis.template.Error.TemplateException;
 
 /** Takes an input directory, transforms the files via a list of {@link SiteFileProcessor} instances, and writes the results to an
- * output directory. */
+ * output directory. The site file processors may modify the content, metadata and output file name of files. Site file processors
+ * can be added via the */
 public class SiteGenerator {
 	/** Optional callback to be invoked for each file that is successfully processed by this generator. See
 	 * {@link SiteGenerator#generate(SiteGeneratorCallback)}. **/
@@ -50,22 +51,25 @@ public class SiteGenerator {
 		return outputDirectory;
 	}
 
-	/** Returns the list of {@link SiteFileProcessor} instances used to process input files. **/
-	public List<SiteFileProcessor> getProcessors () {
-		return processors;
+	/** Adds a {@link SiteFileProcessor} to this generator. The processors will be applied to input files in the order they have
+	 * been added. **/
+	public void addProcessor (SiteFileProcessor processor) {
+		this.processors.add(processor);
 	}
 
-	/** Transforms the files in the input directory via a list of {@link SiteFileProcessor} instances, and writes the results to an
-	 * output directory. Files and directories starting with "_" will be ignored. Throws a {@link SiteGeneratorException} in case
-	 * anything went wrong. When an error occurs, files written until that point will not be cleaned up. */
+	/** Transforms the files in the input directory via a list of {@link SiteFileProcessor} instances added via
+	 * {@link #addProcessor(SiteFileProcessor)}, and writes the results to an output directory. Files and directories starting with
+	 * "_" will be ignored. Throws a {@link SiteGeneratorException} in case anything went wrong. When an error occurs, files
+	 * written until that point will not be cleaned up. */
 	public void generate () {
 		generate(inputDirectory, inputDirectory, outputDirectory, processors, null);
 	}
 
-	/** Transforms the files in the input directory via a list of {@link SiteFileProcessor} instances, and writes the results to an
-	 * output directory. Files and directories starting with "_" will be ignored. Throws a {@link SiteGeneratorException} in case
-	 * anything went wrong. When an error occurs, files written until that point will not be cleaned up. For each successfully
-	 * processed file, the {@link SiteGeneratorCallback} will be called. */
+	/** Transforms the files in the input directory via a list of {@link SiteFileProcessor} instances added via
+	 * {@link #addProcessor(SiteFileProcessor)}, and writes the results to an output directory. Files and directories starting with
+	 * "_" will be ignored. Throws a {@link SiteGeneratorException} in case anything went wrong. When an error occurs, files
+	 * written until that point will not be cleaned up. For each successfully processed file, the {@link SiteGeneratorCallback}
+	 * will be called. */
 	public void generate (SiteGeneratorCallback callback) {
 		generate(inputDirectory, inputDirectory, outputDirectory, processors, callback);
 	}
@@ -105,8 +109,8 @@ public class SiteGenerator {
 	}
 
 	/** Generates the output file by passing the input file through the list of {@link SiteFileProcessor} instances of this
-	 * generator, calling each processor's {@link SiteFileProcessor#process(SiteFile) method, and calculating the end result
-	 * relative to the output directory. **/
+	 * generator, calling each processor's {@link SiteFileProcessor#processOutputFileName(SiteFile) method, and calculating the end
+	 * result relative to the output directory. **/
 	public File generateOutputFile (File inputFile) {
 		File outputFile = new File(outputDirectory, inputFile.getAbsolutePath().replace(inputDirectory.getAbsolutePath(), ""));
 		String outputFileName = outputFile.getName();

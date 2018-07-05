@@ -5,13 +5,17 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-/** A file to be processed by a {@link SiteGenerator}. **/
+/** A file to be processed by a {@link SiteFileProcessor}. **/
 public class SiteFile {
 	private final File input;
-	private File output;
+	private final File output;
 	private byte[] content;
 	private final Map<String, Object> metadata;
 
+	/** Creates a new site file.
+	 * @param input the input file from which the file is read.
+	 * @param output the output file to which the final content is written.
+	 * @param metadata the metadata of the file. */
 	public SiteFile (File input, File output, Map<String, Object> metadata) {
 		this.input = input;
 		this.output = output;
@@ -19,6 +23,10 @@ public class SiteFile {
 		this.metadata = metadata;
 	}
 
+	/** Creates a new site file.
+	 * @param input the input file from which the file is read.
+	 * @param output the output file to which the final content is written.
+	 * @param content the content of the file. Text files are assumed to be UTF-8 encoded. */
 	public SiteFile (File input, File output, byte[] content) {
 		this.input = input;
 		this.output = output;
@@ -26,33 +34,34 @@ public class SiteFile {
 		this.metadata = new HashMap<String, Object>();
 	}
 
-	/** Returns the output file name to which the final content of the file will be written by the {@link SiteGenerator}. **/
+	/** Returns the output file to which the final content of the file will be written by the {@link SiteGenerator}. **/
 	public File getOutput () {
 		return output;
 	}
 
-	/** Returns the content of the file. **/
+	/** Returns the content of the file. Text files will be returned as UTF-8 strings. **/
 	public byte[] getContent () {
 		return content;
 	}
 
-	/** Sets the content of the file. **/
+	/** Sets the content of the file. Text files are assumed to be UTF-8. **/
 	public void setContent (byte[] content) {
 		this.content = content;
 	}
 
-	/** Returns the input file name. **/
+	/** Returns the input file. **/
 	public File getInput () {
 		return input;
 	}
 
-	/** Returns the metadata. **/
+	/** Returns the metadata found in the first template code span, or an empty map if the file has no metadata. **/
 	public Map<String, Object> getMetadata () {
 		return metadata;
 	}
 
-	/** Returns a URL based on the current path in the output field. This can be used in templates to set links. **/
-	public String getUrl () {
+	/** Returns the output directory of this file, relative to the base output directory. E.g. if the base output directory is
+	 * "output/" and the output file is <code>output/blog/index.html</code>, this method returns <code>output/blog/</code>. **/
+	public String getOutputDirectory () {
 		if (output.getParent() == null) return "";
 		String url = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1) : output.getParent();
 		return url.replace("/./", "/");

@@ -36,9 +36,22 @@ import io.marioslab.basis.template.parsing.Parser;
 import io.marioslab.basis.template.parsing.Parser.Macros;
 import io.marioslab.basis.template.parsing.Parser.ParserResult;
 
-/** Processes all files that contain the string ".bt." in their file name. The file content is interpreted as a basis-template.
- * The output file name is stripped of the ".bt." infix. The {@link SiteFile} instance is passed to the template via the variable
- * <code>file</code>. */
+/**
+ * <p>
+ * Processes all files that contain the string ".bt." in their file name. The file content is interpreted as a
+ * <a href="https://github.com/badlogic/basis-template">basis-template</a>. The output file name is stripped of the ".bt." infix.
+ * </p>
+ *
+ * <p>
+ * When evaluating a templated file, the processor will provide variables and functions to the template via the registered
+ * {@link FunctionProvider} instances. See the {@link BuiltinFunctionProvider} for the default implementation.
+ * </p>
+ *
+ * <p>
+ * In addition to the functions and variables provided by the function providers, the {@link SiteFile} representing the file being
+ * evaluated is passed in the variable <code>file</code>.
+ * </p>
+ */
 public class TemplateFileProcessor implements SiteFileProcessor {
 	private final List<FunctionProvider> functionProviders;
 
@@ -138,8 +151,8 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 		}.load(path);
 	}
 
-	/** Provides functions to a template by setting them on a {@link TemplateContext}. Used by a {@link TemplateFileProcessor} to
-	 * expose functionality to templated files. **/
+	/** Provides functions and variables to a template by setting them on a {@link TemplateContext} passed to the template for
+	 * evaluation. See {@link BuiltinFunctionProvider} for a default implementation. **/
 	public interface FunctionProvider {
 
 		@FunctionalInterface
@@ -160,6 +173,33 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 		public void provide (SiteFile file, TemplateContext context);
 	}
 
+	/**
+	 * <p>
+	 * A {@link FunctionProvider} adding useful functions to the {@link TemplateContext} used for evaluating a file templated with
+	 * <a href="https://github.com/badlogic/basis-template">basis-tempalte</a>.
+	 * </p>
+	 *
+	 * <p>
+	 * The following functions are provided:
+	 * </p>
+	 *
+	 * <ul>
+	 * <li><code>Date parseDate(String date)</code>: parses the string into a Date instance. The expected format is "yyyy/MM/dd
+	 * hh:ss", e.g. "2018/07/04 21:30".</li>
+	 * <li><code>String formatDate(String format, Date date)</code>: formats the Date instance in accordance to the given date
+	 * format. Follows the format syntax of {@link SimpleDateFormat}.</li>
+	 * <li><code>List<SiteFile> listFiles(String path, boolean withMetadataOnly, boolean recursive)</code>: lists all files in the
+	 * given directory. The path is given relative to the {@link SiteGenerator} input path. If <code>true</code> is passed for
+	 * <code>recursive</code> then files will be listed recursively. If <code>true</code> is given for
+	 * <code>withMetadataOnly</code> is given, then only files with the ".bt." infix in their name and with a metadata definition
+	 * in the first code span of the file will be returned.</li>
+	 * <li><code>void sortFiles(List<SiteFile> files, String metadataFieldName, boolean ascending)</code>: sorts the file list
+	 * based on the metadata field in ascending or descending order. The metadata field must be a {@link Comparable}, e.g. numbers,
+	 * dates, or strings.</li>
+	 * <li><code>void sort(Object arrayOrList)</code>: sorts the list or array of Comparable instances. If the items in the list or
+	 * array are not comparable, the sort order is undefined.</li>
+	 * </ul>
+	 **/
 	public static class BuiltinFunctionProvider implements FunctionProvider {
 		private final SiteGenerator siteGenerator;
 

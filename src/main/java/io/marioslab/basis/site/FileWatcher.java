@@ -14,11 +14,17 @@ import com.sun.nio.file.SensitivityWatchEventModifier;
 
 import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
 
+/** Call the {@link FileWatcher#watch(File, Runnable)} method to listen for changes (additions, deletions, modifications) of files
+ * and sub-folders in a folder. **/
 @SuppressWarnings("restriction")
 public class FileWatcher {
 	private FileWatcher () {
 	}
 
+	/** Watches a directory for changes (file/folder additions, deletion, modification). Calls the provided {@link Runnable} in
+	 * case of a change. Throws a {@link SiteGeneratorException} if watching the directory failed.
+	 * @param directory
+	 * @param onChange */
 	@SuppressWarnings("unchecked")
 	public static void watch (File directory, Runnable onChange) {
 		try {
@@ -47,8 +53,8 @@ public class FileWatcher {
 				onChange.run();
 			}
 
-		} catch (IOException | InterruptedException e) {
-			throw new SiteGeneratorException("Watching directory " + directory + " for changes failed.", e);
+		} catch (Throwable t) {
+			throw new SiteGeneratorException("Watching directory " + directory + " for changes failed.", t);
 		}
 	}
 
