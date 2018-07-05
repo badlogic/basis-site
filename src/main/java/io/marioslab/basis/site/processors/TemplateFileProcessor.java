@@ -78,6 +78,7 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 		file.setContent(newContent.toByteArray());
 	}
 
+	@SuppressWarnings("unchecked")
 	static void readMetadata (List<Node> nodes, SiteFile file) {
 		if (nodes.size() > 0) {
 			for (Node node : nodes) {
@@ -166,7 +167,6 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 			this.siteGenerator = siteGenerator;
 		}
 
-		@SuppressWarnings("unchecked")
 		private void list (File directory, List<SiteFile> files, boolean withMetadataOnly, boolean recursive) {
 			File[] children = directory.listFiles();
 			if (children != null) {

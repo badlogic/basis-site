@@ -46,6 +46,7 @@
 		<maven.compiler.source>${java.version}</maven.compiler.source>
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<additionalparam>-Xdoclint:none</additionalparam>
+		<additionalparam>-Xlint:unchecked</additionalparam>
 
 		<basisarguments.version>1.3</basisarguments.version>
 		<basistemplate.version>1.5</basistemplate.version>
