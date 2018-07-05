@@ -569,6 +569,9 @@ public class BlankLineFileProcessor implements SiteFileProcessor {
 }
 ```
 
+## Writing a `FunctionProvider`
+TBD
+
 ## Logging
 Basis-site uses [minlog](https://github.com/esotericsoftware/minlog) for logging. Please see its documentation if you need to modify logging.
 
