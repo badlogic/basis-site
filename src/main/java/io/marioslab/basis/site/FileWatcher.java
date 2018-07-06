@@ -9,6 +9,8 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.sun.nio.file.SensitivityWatchEventModifier;
 
@@ -29,7 +31,8 @@ public class FileWatcher {
 	public static void watch (File directory, Runnable onChange) {
 		try {
 			WatchService watcher = FileSystems.getDefault().newWatchService();
-			registerDirectories(watcher, directory);
+			Map<WatchKey, File> keys = new HashMap<>();
+			registerDirectories(watcher, directory, keys);
 
 			while (true) {
 				WatchKey key = watcher.take();
@@ -40,16 +43,13 @@ public class FileWatcher {
 
 					WatchEvent<Path> ev = (WatchEvent<Path>)event;
 					Path filename = ev.context();
-					File file = filename.toFile();
+					File file = new File(keys.get(key), filename.toFile().getName());
 					if (file.exists() && file.isDirectory()) {
-						registerDirectories(watcher, file);
+						registerDirectories(watcher, file, keys);
 					}
 				}
 
-				if (!key.reset()) {
-					throw new SiteGeneratorException("Watching directory " + directory + " for changes failed.");
-				}
-
+				key.reset();
 				onChange.run();
 			}
 
@@ -58,16 +58,17 @@ public class FileWatcher {
 		}
 	}
 
-	private static void registerDirectories (WatchService watcher, File dir) throws IOException {
+	private static void registerDirectories (WatchService watcher, File dir, Map<WatchKey, File> keys) throws IOException {
 		if (!dir.isDirectory()) return;
-		dir.toPath().register(watcher,
-			new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY},
-			SensitivityWatchEventModifier.HIGH);
+		keys.put(
+			dir.toPath().register(watcher, new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE,
+				StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY}, SensitivityWatchEventModifier.HIGH),
+			dir);
 
 		File[] children = dir.listFiles();
 		if (children != null) {
 			for (File child : children) {
-				if (child.isDirectory()) registerDirectories(watcher, child);
+				if (child.isDirectory()) registerDirectories(watcher, child, keys);
 			}
 		}
 	}
