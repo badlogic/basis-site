@@ -79,7 +79,11 @@ public class BasisSite {
 		}
 	}
 
-	public void generate () {
+	public synchronized void addProcessor (SiteFileProcessor processor) {
+		generator.addProcessor(processor);
+	}
+
+	public synchronized void generate () {
 		if (deleteOutputDirectory) deleteAndCreateOutput();
 
 		if (watch) {

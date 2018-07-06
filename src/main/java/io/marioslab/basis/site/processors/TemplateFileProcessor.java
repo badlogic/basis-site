@@ -113,11 +113,12 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 					return new SimpleDateFormat(format).format(date);
 				});
 				try {
-					node.evaluate(new Template(Arrays.asList(node), new Macros(), Collections.emptyList()), context, new OutputStream() {
-						@Override
-						public void write (int b) {
-						}
-					});
+					node.evaluate(new Template(Arrays.asList(node), new Macros(), Collections.emptyList()), context,
+						new OutputStream() {
+							@Override
+							public void write (int b) {
+							}
+						});
 				} catch (IOException e) {
 					// never reached
 				}
@@ -248,36 +249,37 @@ public class TemplateFileProcessor implements SiteFileProcessor {
 				return new SimpleDateFormat(format).format(date);
 			});
 
-			context.set("listFiles", (TriFunction<String, Boolean, Boolean, List<SiteFile>>) (String dir, Boolean withMetadataOnly, Boolean recursive) -> {
-				List<SiteFile> files = new ArrayList<SiteFile>();
-				File directory = new File(siteGenerator.getInputDirectory(), dir);
-				list(directory, files, withMetadataOnly, recursive);
-				return files;
-			});
-
-			context.set("sortFiles",
-				(TriFunction<List<SiteFile>, String, Boolean, List<SiteFile>>) (List<SiteFile> files, String metadataField, Boolean ascending) -> {
-					files.sort( (SiteFile a, SiteFile b) -> {
-						int result = 0;
-						Object valA = a.getMetadata().get(metadataField);
-						Object valB = b.getMetadata().get(metadataField);
-						if (valA == null && valB == null)
-							return 0;
-						else if (valA == null && valB != null)
-							result = -1;
-						else if (valA != null && valB == null)
-							result = 1;
-						else {
-							if (valA instanceof Comparable && valB instanceof Comparable) {
-								return ((Comparable)valA).compareTo(valB);
-							} else {
-								return 0;
-							}
-						}
-						return ascending ? result : -result;
-					});
+			context.set("listFiles",
+				(TriFunction<String, Boolean, Boolean, List<SiteFile>>) (String dir, Boolean withMetadataOnly, Boolean recursive) -> {
+					List<SiteFile> files = new ArrayList<SiteFile>();
+					File directory = new File(siteGenerator.getInputDirectory(), dir);
+					list(directory, files, withMetadataOnly, recursive);
 					return files;
 				});
+
+			context.set("sortFiles", (TriFunction<List<SiteFile>, String, Boolean, List<SiteFile>>) (List<SiteFile> files,
+				String metadataField, Boolean ascending) -> {
+				files.sort( (SiteFile a, SiteFile b) -> {
+					int result = 0;
+					Object valA = a.getMetadata().get(metadataField);
+					Object valB = b.getMetadata().get(metadataField);
+					if (valA == null && valB == null)
+						return 0;
+					else if (valA == null && valB != null)
+						result = -1;
+					else if (valA != null && valB == null)
+						result = 1;
+					else {
+						if (valA instanceof Comparable && valB instanceof Comparable) {
+							result = ((Comparable)valA).compareTo(valB);
+						} else {
+							return 0;
+						}
+					}
+					return ascending ? result : -result;
+				});
+				return files;
+			});
 
 			context.set("sort", (BiFunction<Object, Boolean, Object>) (listOrArrayOrMap, ascending) -> {
 				if (listOrArrayOrMap instanceof List) {
