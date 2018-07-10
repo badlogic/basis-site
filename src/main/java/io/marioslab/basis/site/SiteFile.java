@@ -63,7 +63,8 @@ public class SiteFile {
 	 * "output/" and the output file is <code>output/blog/index.html</code>, this method returns <code>blog/</code>. **/
 	public String getOutputDirectory () {
 		if (output.getParent() == null) return "";
-		String url = output.getParent().indexOf('/') >= 0 ? output.getParent().substring(output.getParent().indexOf('/') + 1) : output.getParent();
+		String url = output.getParent().indexOf(File.separator) >= 0 ? output.getParent().substring(output.getParent().indexOf(File.separator) + 1) : output.getParent();
+		url = url.replace(File.separatorChar, '/');
 		if (!url.endsWith("/")) url += "/";
 		return url.replace("/./", "/");
 	}
