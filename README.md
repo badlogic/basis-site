@@ -374,13 +374,13 @@ As a dependency of your Maven project:
 <dependency>
    <groupId>io.marioslab.basis</groupId>
    <artifactId>site</artifactId>
-   <version>1.2</version>
+   <version>1.4</version>
 </dependency>
 ```
 
 As a dependency of your Gradle project:
 ```
-compile 'io.marioslab.basis:site:1.2'
+compile 'io.marioslab.basis:site:1.4'
 ```
 
 You can also build the `.jar` file yourself, assuming you have Maven and JDK 1.8+ installed:
