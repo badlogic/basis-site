@@ -9,7 +9,7 @@
 <ul>
 {{for file in listFiles("blog/", true, true)}}
 	{{if file.metadata.published == false continue end}}
-	<li><a href="{{file.getUrl()}}">{{file.metadata.date}} - {{file.metadata.title}}</a></li>
+	<li><a href="{{file.getOutputDirectory()}}">{{file.metadata.date}} - {{file.metadata.title}}</a></li>
 {{end}}
 </ul>
 
