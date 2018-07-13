@@ -68,4 +68,10 @@ public class SiteFile {
 		if (!url.endsWith("/")) url += "/";
 		return url.replace("/./", "/");
 	}
+
+	/** Returns the output file name. E.g. if the output file is <code>output/page/about.html</code>, this method
+	 * returns <code>about.html</code>. **/
+	public String getOutputFile () {
+		return output.getName();
+	}
 }
