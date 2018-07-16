@@ -57,6 +57,18 @@ public class SiteGenerator {
 		this.processors.add(processor);
 	}
 
+	/** Replaces the {@link SiteFileProcessor} of the same class with the provided processor, or appends it at the end of the
+	 * procesor list. */
+	public void replaceProcessor (SiteFileProcessor processor) {
+		for (int i = 0; i < processors.size(); i++) {
+			if (processors.get(i).getClass().equals(processor.getClass())) {
+				processors.set(i, processor);
+				return;
+			}
+		}
+		processors.add(processor);
+	}
+
 	/** Transforms the files in the input directory via a list of {@link SiteFileProcessor} instances added via
 	 * {@link #addProcessor(SiteFileProcessor)}, and writes the results to an output directory. Files and directories starting with
 	 * "_" will be ignored. Throws a {@link SiteGeneratorException} in case anything went wrong. When an error occurs, files

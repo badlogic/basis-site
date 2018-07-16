@@ -79,11 +79,35 @@ public class BasisSite {
 		}
 	}
 
+	/** Adds a {@link SiteFileProcessor} to this generator. The processors will be applied to input files in the order they have
+	 * been added. **/
 	public synchronized void addProcessor (SiteFileProcessor processor) {
 		generator.addProcessor(processor);
 	}
 
+	/** Replaces the SiteFileProcessor of the same class with the provided processor, or appends it at the end of the procesor
+	 * list. */
+	public synchronized void replaceProcessor (SiteFileProcessor processor) {
+		generator.replaceProcessor(processor);
+	}
+
+	/** Returns the {@link SiteGenerator}. Use the {@link #addProcessor(SiteFileProcessor)} and
+	 * {@link #replaceProcessor(SiteFileProcessor)} methods to modify it for thread-safety. This method only exists as some
+	 * {@link SiteFileProcessor} instances may require a generator to be constructed. */
+	public SiteGenerator getGenerator () {
+		return generator;
+	}
+
+	/** Generates the output from the input and optionally enters a loop that watches for input folder changes and re-generates the
+	 * site. **/
 	public synchronized void generate () {
+		generate( () -> {
+		});
+	}
+
+	/** Generates the output from the input and optionally enters a loop that watches for input folder changes and re-generates the
+	 * site. Calls the Runnable after each successful re-generation. **/
+	public synchronized void generate (Runnable callback) {
 		if (deleteOutputDirectory) deleteAndCreateOutput();
 
 		if (watch) {
@@ -92,6 +116,7 @@ public class BasisSite {
 				generator.generate( (file) -> {
 					Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
 				});
+				callback.run();
 			} catch (Throwable t) {
 				Log.error(t.getMessage());
 				Log.debug("Exception", t);
@@ -106,6 +131,7 @@ public class BasisSite {
 					generator.generate( (file) -> {
 						Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
 					});
+					callback.run();
 				} catch (Throwable t) {
 					Log.error(t.getMessage());
 					Log.debug("Exception", t);
@@ -119,6 +145,7 @@ public class BasisSite {
 				Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
 				Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - start) / 1000000000f) + " secs");
 			});
+			callback.run();
 		}
 	}
 
