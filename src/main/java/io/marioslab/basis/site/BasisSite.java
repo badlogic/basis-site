@@ -87,6 +87,7 @@ public class BasisSite {
 		if (deleteOutputDirectory) deleteAndCreateOutput();
 
 		if (watch) {
+			long start = System.nanoTime();
 			try {
 				generator.generate( (file) -> {
 					Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
@@ -96,8 +97,10 @@ public class BasisSite {
 				Log.debug("Exception", t);
 			}
 
+			Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - start) / 1000000000f + "secs"));
 			Log.info("Watching input directory " + generator.getInputDirectory().getPath());
 			FileWatcher.watch(generator.getInputDirectory(), () -> {
+				long startInner = System.nanoTime();
 				try {
 					if (deleteOutputDirectory) deleteAndCreateOutput();
 					generator.generate( (file) -> {
@@ -107,11 +110,14 @@ public class BasisSite {
 					Log.error(t.getMessage());
 					Log.debug("Exception", t);
 				}
+				Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - startInner) / 1000000000f + "secs"));
 				Log.info("Watching input directory " + generator.getInputDirectory().getPath());
 			});
 		} else {
 			generator.generate( (file) -> {
+				long start = System.nanoTime();
 				Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+				Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - start) / 1000000000f + "secs"));
 			});
 		}
 	}
