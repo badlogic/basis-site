@@ -570,7 +570,84 @@ public class BlankLineFileProcessor implements SiteFileProcessor {
 ```
 
 ## Writing a `FunctionProvider`
-TBD
+Sometimes the built in functions are not enough and a custom functionality is needed that can format/create content.
+
+You can create functions which will be made available in the context and used in the site.  
+
+For example if a text is in markdown and needs to be rendered in html a `renderMarkdown` function would be handy. 
+  
+Function providers must implement the [`TemplateFileProcessor.FunctionProvider](src/main/java/io/marioslab/basis/site/processors/TemplateFileProcessor.java) interface.
+
+There is only one method to implement: `provide(SiteFile file, TemplateContext context)`. 
+
+The `file` is the `SiteFile` on which the generator operates and the `context` is the site's `context` used in the rendering and the functions will reside there.  
+
+The following example adds three functions to the context. 
+
+`toUpperCase` takes one argument of type `String` and returns the input as a `String` transformed to upper case.
+
+`concat` returns the concatenated `String`s given as input.
+
+`date` takes one `String` parameter as date format and returns the current date formatted.   
+
+```java
+public class StringFunctionProvider implements TemplateFileProcessor.FunctionProvider {
+    @Override
+    public void provide(SiteFile file, TemplateContext context) {
+        context.set("toUpperCase", (Function<String, String>) (String input) -> {
+            return input.toUpperCase();
+        });
+
+        context.set("concat", (BiFunction<String, String, String>) (String first, String second) -> {
+            return first.concat(second);
+        });
+
+        context.set("date", (Function<String, String>) (String format) -> {
+            return new SimpleDateFormat(format).format(new Date());
+        });
+    }
+}
+```
+
+To register the new functions with the generator with the provided `TemplateFileProcessor`, the current processor needs to be replaced when the site object is created and configured.
+
+In the main `java` class where the site is created, the processor can be replaced like the following.
+`TemplateFileProcessor` takes a list of `FunctionProvider`s as a parameter and we will tap in there.
+ 
+```java
+BasisSite site;
+try {
+    parsed = args.parse(cliArgs);
+    site = new BasisSite(parsed);
+    site.replaceProcessor(
+            new TemplateFileProcessor(Arrays.asList(
+                new BuiltinFunctionProvider(site.getGenerator()),
+                new StringFunctionProvider()    // register new function provider
+            )
+        )
+    );
+} catch (Throwable e) {
+    Log.error(e.getMessage());
+    Log.debug("Exception", e);
+    args.printHelp(System.out);
+    System.exit(-1);
+    return; // never reached
+}
+```
+
+Using the functions in the template
+
+```
+{{ toUpperCase("This is Ponyville")}}
+{{ concat("Rainbow ", "Dash") }}
+Last seen: {{ date("EEE, MMM d, ''yy")}}
+```
+results
+```
+THIS IS PONYVILLE
+Rainbow Dash
+Last seen: Wed, Sep 19, '18
+```
 
 ## Logging
 Basis-site uses [minlog](https://github.com/esotericsoftware/minlog) for logging. Please see its documentation if you need to modify logging.
