@@ -49,6 +49,7 @@
 		<basistemplate.version>1.8-SNAPSHOT</basistemplate.version>
 		<minlog.version>1.2</minlog.version>
 		<junit.version>4.12</junit.version>
+		<directoryWatcher.version>0.17.1</directoryWatcher.version>
 	</properties>
 
 	<repositories>
@@ -92,6 +93,12 @@
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.methvin</groupId>
+			<artifactId>directory-watcher</artifactId>
+			<version>${directoryWatcher.version}</version>
 		</dependency>
 	</dependencies>
 

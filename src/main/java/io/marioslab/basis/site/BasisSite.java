@@ -2,6 +2,7 @@
 package io.marioslab.basis.site;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 
 import com.esotericsoftware.minlog.Log;
@@ -13,6 +14,8 @@ import io.marioslab.basis.arguments.Arguments.ParsedArguments;
 import io.marioslab.basis.site.SiteGenerator.SiteGeneratorException;
 import io.marioslab.basis.site.processors.TemplateFileProcessor;
 import io.marioslab.basis.site.processors.TemplateFileProcessor.BuiltinFunctionProvider;
+import io.methvin.watcher.DirectoryWatcher;
+import org.slf4j.helpers.NOPLogger;
 
 /** Command line application for generating static websites. See <a href="https://github.com/badlogic/basis-site">the
  * documentation</a>. **/
@@ -124,21 +127,28 @@ public class BasisSite {
 
 			Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - start) / 1000000000f) + " secs");
 			Log.info("Watching input directory " + generator.getInputDirectory().getPath());
-			FileWatcher.watch(generator.getInputDirectory(), () -> {
-				long startInner = System.nanoTime();
-				try {
-					if (deleteOutputDirectory) deleteAndCreateOutput();
-					generator.generate( (file) -> {
-						Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
-					});
-					callback.run();
-				} catch (Throwable t) {
-					Log.error(t.getMessage());
-					Log.debug("Exception", t);
-				}
-				Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - startInner) / 1000000000f) + " secs");
-				Log.info("Watching input directory " + generator.getInputDirectory().getPath());
-			});
+			try {
+				DirectoryWatcher watcher = DirectoryWatcher.builder()
+						.path(generator.getInputDirectory().toPath())
+						.listener((event) -> {
+							long startInner = System.nanoTime();
+							try {
+								if (deleteOutputDirectory) deleteAndCreateOutput();
+								generator.generate( (file) -> {
+									Log.info("Processed " + file.getInput().getPath() + " -> " + file.getOutput().getPath());
+								});
+								callback.run();
+							} catch (Throwable t) {
+								Log.error(t.getMessage());
+								Log.debug("Exception", t);
+							}
+							Log.info("Generating output took: " + String.format("%.2f", (System.nanoTime() - startInner) / 1000000000f) + " secs");
+							Log.info("Watching input directory " + generator.getInputDirectory().getPath());
+						}).build();
+				watcher.watch();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
 		} else {
 			generator.generate( (file) -> {
 				long start = System.nanoTime();
