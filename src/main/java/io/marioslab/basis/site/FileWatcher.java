@@ -37,20 +37,28 @@ public class FileWatcher {
 			while (true) {
 				WatchKey key = watcher.take();
 
-				for (WatchEvent<?> event : key.pollEvents()) {
-					WatchEvent.Kind<?> kind = event.kind();
-					if (kind == StandardWatchEventKinds.OVERFLOW) continue;
+				boolean modifyDir = false;
+				while (key != null) {
+					for (WatchEvent<?> event : key.pollEvents()) {
+						WatchEvent.Kind<?> kind = event.kind();
+						if (kind == StandardWatchEventKinds.OVERFLOW) continue;
 
-					WatchEvent<Path> ev = (WatchEvent<Path>)event;
-					Path filename = ev.context();
-					File file = new File(keys.get(key), filename.toFile().getName());
-					if (file.exists() && file.isDirectory()) {
-						registerDirectories(watcher, file, keys);
+						WatchEvent<Path> ev = (WatchEvent<Path>) event;
+						Path filename = ev.context();
+						File file = new File(keys.get(key), filename.toFile().getName());
+						if (file.exists() && file.isDirectory()) {
+							registerDirectories(watcher, file, keys);
+							if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
+								modifyDir = true;
+								break;
+							}
+						}
 					}
-				}
 
-				key.reset();
-				onChange.run();
+					key.reset();
+					key = watcher.poll();
+				}
+				if (!modifyDir) onChange.run();
 			}
 
 		} catch (Throwable t) {
@@ -60,9 +68,10 @@ public class FileWatcher {
 
 	private static void registerDirectories (WatchService watcher, File dir, Map<WatchKey, File> keys) throws IOException {
 		if (!dir.isDirectory()) return;
+
 		keys.put(
 			dir.toPath().register(watcher, new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE,
-				StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY}, SensitivityWatchEventModifier.HIGH),
+				StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY}),
 			dir);
 
 		File[] children = dir.listFiles();
