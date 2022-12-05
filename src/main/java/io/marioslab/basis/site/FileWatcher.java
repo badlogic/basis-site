@@ -71,7 +71,7 @@ public class FileWatcher {
 
 		keys.put(
 			dir.toPath().register(watcher, new WatchEvent.Kind[] {StandardWatchEventKinds.ENTRY_CREATE,
-				StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY}),
+				StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY}, SensitivityWatchEventModifier.HIGH),
 			dir);
 
 		File[] children = dir.listFiles();
